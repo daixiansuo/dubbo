@@ -16,6 +16,7 @@
  */
 package com.alibaba.dubbo.common.utils;
 
+import com.dxs.common.TestEntityBean;
 import junit.framework.TestCase;
 import org.junit.Test;
 
@@ -59,5 +60,12 @@ public class StringUtilsTest extends TestCase {
         assertEquals("ab-cd-ef", StringUtils.camelToSplitName("AbCdEf", "-"));
         assertEquals("ab-cd-ef", StringUtils.camelToSplitName("ab-cd-ef", "-"));
         assertEquals("abcdef", StringUtils.camelToSplitName("abcdef", "-"));
+
+        String name = TestEntityBean.class.getMethods()[0].getName();
+        String property = StringUtils.camelToSplitName(name.substring(3, 4).toLowerCase() + name.substring(4), ".");
+        System.out.println(property);
+        // eg: getNickName  == nick.name
+
+        System.out.println(TestEntityBean.class.getSimpleName());
     }
 }

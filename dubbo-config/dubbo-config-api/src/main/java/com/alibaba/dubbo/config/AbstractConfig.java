@@ -38,6 +38,8 @@ import java.util.regex.Pattern;
 /**
  * Utility methods and public methods for parsing configuration
  *
+ * TODO：config 抽象体系 ==》https://blog.csdn.net/swordyijianpku/article/details/105731679
+ *
  * @export
  */
 public abstract class AbstractConfig implements Serializable {
@@ -89,6 +91,11 @@ public abstract class AbstractConfig implements Serializable {
         return value;
     }
 
+    /**
+     *
+     * 从系统环境变量、Properties 配置文件 依次加载设置属性值
+     * @param config 配置对象
+     */
     protected static void appendProperties(AbstractConfig config) {
         if (config == null) {
             return;
@@ -168,6 +175,11 @@ public abstract class AbstractConfig implements Serializable {
         return tag;
     }
 
+    /**
+     * 添加 Config 实例对象的属性，到 parameters 中
+     * @param parameters 参数集合
+     * @param config Config实例
+     */
     protected static void appendParameters(Map<String, String> parameters, Object config) {
         appendParameters(parameters, config, null);
     }
@@ -186,6 +198,7 @@ public abstract class AbstractConfig implements Serializable {
                         && Modifier.isPublic(method.getModifiers())
                         && method.getParameterTypes().length == 0
                         && isPrimitive(method.getReturnType())) {
+
                     Parameter parameter = method.getAnnotation(Parameter.class);
                     if (method.getReturnType() == Object.class || parameter != null && parameter.excluded()) {
                         continue;
@@ -202,6 +215,7 @@ public abstract class AbstractConfig implements Serializable {
                     String str = String.valueOf(value).trim();
                     if (value != null && str.length() > 0) {
                         if (parameter != null && parameter.escaped()) {
+                            // encode编码
                             str = URL.encode(str);
                         }
                         if (parameter != null && parameter.append()) {
@@ -239,6 +253,13 @@ public abstract class AbstractConfig implements Serializable {
         }
     }
 
+
+    /**
+     * 添加 Config 实例对象的属性，到 parameters 中
+     * TODO： Parameter 注解当中的 attribute = true 才会被添加到 parameters 中
+     * @param parameters 参数集合
+     * @param config Config 实例
+     */
     protected static void appendAttributes(Map<Object, Object> parameters, Object config) {
         appendAttributes(parameters, config, null);
     }
@@ -408,6 +429,12 @@ public abstract class AbstractConfig implements Serializable {
         this.id = id;
     }
 
+    /**
+     * TODO： setterMethod.invoke(this, value);   this ？？ 当前配置对象？
+     * 从注解中解析配置信息 填充到 config配置对象中
+     * @param annotationClass 注解Class
+     * @param annotation 注解对应的配置对象
+     */
     protected void appendAnnotation(Class<?> annotationClass, Object annotation) {
         Method[] methods = annotationClass.getMethods();
         for (Method method : methods) {

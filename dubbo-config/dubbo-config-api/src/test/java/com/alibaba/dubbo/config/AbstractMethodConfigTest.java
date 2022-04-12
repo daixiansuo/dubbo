@@ -52,8 +52,9 @@ public class AbstractMethodConfigTest {
     @Test
     public void testLoadbalance() throws Exception {
         MethodConfig methodConfig = new MethodConfig();
-        methodConfig.setLoadbalance("mockloadbalance");
-        assertThat(methodConfig.getLoadbalance(), equalTo("mockloadbalance"));
+        // TODO： LoadBalance.class 的实现类  SPI 扩展点检测
+        methodConfig.setLoadbalance("roundrobin");
+        assertThat(methodConfig.getLoadbalance(), equalTo("roundrobin"));
     }
 
     @Test

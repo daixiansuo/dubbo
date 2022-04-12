@@ -17,6 +17,7 @@
 package com.alibaba.dubbo.config;
 
 import com.alibaba.dubbo.common.Constants;
+import com.alibaba.dubbo.common.extension.ExtensionLoader;
 import com.alibaba.dubbo.common.utils.ConfigUtils;
 import com.alibaba.dubbo.config.api.Greeting;
 import com.alibaba.dubbo.config.support.Parameter;
@@ -135,6 +136,7 @@ public class AbstractConfigTest {
         TestCase.assertEquals("one", parameters.get("key.1"));
         TestCase.assertEquals("two", parameters.get("key.2"));
         TestCase.assertEquals("1", parameters.get("num"));
+        // TODO：会对 value 进行encode编码
         TestCase.assertEquals("hello%2Fworld", parameters.get("naming"));
         TestCase.assertEquals("30", parameters.get("age"));
     }

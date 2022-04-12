@@ -23,6 +23,10 @@
 
     <dubbo:application name="annotation-consumer"/>
     <dubbo:registry address="127.0.0.1:4548"/>
-    <dubbo:annotation package="com.alibaba.dubbo.config.spring.annotation.consumer" version="2.0.0"/>
+
+    <!-- 默认代码 -->
+    <!--    <dubbo:annotation package="com.alibaba.dubbo.config.spring.annotation.consumer" version="2.0.0"/>-->
+
+    <dubbo:annotation package="com.alibaba.dubbo.config.spring.annotation.consumer"/>
 
 </beans>

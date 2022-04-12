@@ -199,6 +199,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             if (export == null) {
                 export = provider.getExport();
             }
+            // 延迟导出服务，等到spring容器初始化完毕
             if (delay == null) {
                 delay = provider.getDelay();
             }
@@ -208,6 +209,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         }
 
         if (delay != null && delay > 0) {
+            // 延迟导出
             delayExportExecutor.schedule(new Runnable() {
                 @Override
                 public void run() {
