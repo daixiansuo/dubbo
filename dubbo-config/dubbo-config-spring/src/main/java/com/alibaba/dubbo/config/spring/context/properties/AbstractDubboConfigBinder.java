@@ -61,6 +61,7 @@ public abstract class AbstractDubboConfigBinder implements DubboConfigBinder {
     @Override
     public final void setEnvironment(Environment environment) {
 
+        // TODO：从环境变量中 获取配置属性
         if (environment instanceof ConfigurableEnvironment) {
             this.propertySources = ((ConfigurableEnvironment) environment).getPropertySources();
         }

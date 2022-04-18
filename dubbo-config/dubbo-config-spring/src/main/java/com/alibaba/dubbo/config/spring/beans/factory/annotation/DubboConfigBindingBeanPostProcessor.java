@@ -86,6 +86,7 @@ public class DubboConfigBindingBeanPostProcessor implements BeanPostProcessor, A
 
             AbstractConfig dubboConfig = (AbstractConfig) bean;
 
+            // TODO：数据绑定，从环境变量中获取加载的配置文件属性  通过 DataBinder 绑定到 具体的 Config 上。
             bind(prefix, dubboConfig);
 
             customize(beanName, dubboConfig);

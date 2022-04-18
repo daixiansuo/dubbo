@@ -82,6 +82,15 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
 
     }
 
+    /**
+     * TODO： multiple = true, 即用一个配置存在多个，eg：多注册中心、多protocol
+     * TODO：
+     *
+     * @param prefix      配置前缀 eg：dubbo.registry
+     * @param configClass 配置类型 eg：RegistryConfig.class
+     * @param multiple    是否多个
+     * @param registry    BeanDefinitionRegistry 用于向容器中注册 BeanDefinition
+     */
     private void registerDubboConfigBeans(String prefix,
                                           Class<? extends AbstractConfig> configClass,
                                           boolean multiple,
@@ -112,6 +121,7 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
 
     }
 
+
     private void registerDubboConfigBean(String beanName, Class<? extends AbstractConfig> configClass,
                                          BeanDefinitionRegistry registry) {
 
@@ -119,6 +129,7 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
 
         AbstractBeanDefinition beanDefinition = builder.getBeanDefinition();
 
+        // TODO： 向容器中注册 configClass 对应的 BeanDefinition
         registry.registerBeanDefinition(beanName, beanDefinition);
 
         if (log.isInfoEnabled()) {
@@ -128,6 +139,16 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
 
     }
 
+
+    /**
+     * TODO：向容器中 注册 DubboConfigBindingBeanPostProcessor 处理器的 BeanDefinition
+     * TODO：主要用于在bean生命周期中的 属性赋值之后，初始化之前 的阶段进行 特定处理。
+     * @see DubboConfigBindingBeanPostProcessor#postProcessBeforeInitialization(java.lang.Object, java.lang.String)
+     * @param prefix
+     * @param beanName
+     * @param multiple
+     * @param registry
+     */
     private void registerDubboConfigBindingBeanPostProcessor(String prefix, String beanName, boolean multiple,
                                                              BeanDefinitionRegistry registry) {
 

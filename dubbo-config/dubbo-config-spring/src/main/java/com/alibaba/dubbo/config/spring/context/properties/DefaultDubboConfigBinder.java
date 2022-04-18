@@ -41,6 +41,7 @@ public class DefaultDubboConfigBinder extends AbstractDubboConfigBinder {
         // Convert Map to MutablePropertyValues
         MutablePropertyValues propertyValues = new MutablePropertyValues(properties);
         // Bind
+        // TODO: 从环境变量中获取到的 属性，绑定到 config 上。
         dataBinder.bind(propertyValues);
     }
 

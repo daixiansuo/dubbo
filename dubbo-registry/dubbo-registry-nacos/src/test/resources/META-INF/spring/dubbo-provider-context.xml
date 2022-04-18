@@ -8,7 +8,7 @@
     <dubbo:application name="dubbo-provider-xml-demo"/>
 
     <!-- 使用 Nacos 注册中心 -->
-    <dubbo:registry address="nacos://127.0.0.1:8848"/>
+    <dubbo:registry address="nacos://175.24.191.169:8848"/>
 
     <!-- 用dubbo协议在随机端口暴露服务 -->
     <dubbo:protocol name="dubbo" port="-1"/>

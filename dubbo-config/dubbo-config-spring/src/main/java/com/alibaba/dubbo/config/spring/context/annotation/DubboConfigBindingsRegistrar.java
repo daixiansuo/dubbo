@@ -44,6 +44,7 @@ public class DubboConfigBindingsRegistrar implements ImportBeanDefinitionRegistr
         AnnotationAttributes attributes = AnnotationAttributes.fromMap(
                 importingClassMetadata.getAnnotationAttributes(EnableDubboConfigBindings.class.getName()));
 
+        // 拿到 EnableDubboConfigBinding 集合
         AnnotationAttributes[] annotationAttributes = attributes.getAnnotationArray("value");
 
         DubboConfigBindingRegistrar registrar = new DubboConfigBindingRegistrar();

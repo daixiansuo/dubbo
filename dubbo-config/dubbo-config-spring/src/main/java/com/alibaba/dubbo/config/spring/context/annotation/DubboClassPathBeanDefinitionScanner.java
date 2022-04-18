@@ -57,11 +57,24 @@ public class DubboClassPathBeanDefinitionScanner extends ClassPathBeanDefinition
 
     }
 
+    /**
+     * 作用就是将指定包下的类通过一定规则过滤后， 将Class 信息包装成 BeanDefinition 的形式，注册到IOC容器中
+     * TODO：返回的 Set<BeanDefinitionHolder>，都已经被注册到容器中了。
+     * @param basePackages
+     * @return
+     */
     @Override
     public Set<BeanDefinitionHolder> doScan(String... basePackages) {
         return super.doScan(basePackages);
     }
 
+    /**
+     * 判断是否 需要注册，检测容器中是否已经存在 beanName
+     * @param beanName
+     * @param beanDefinition
+     * @return
+     * @throws IllegalStateException
+     */
     @Override
     public boolean checkCandidate(String beanName, BeanDefinition beanDefinition) throws IllegalStateException {
         return super.checkCandidate(beanName, beanDefinition);

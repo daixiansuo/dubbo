@@ -56,7 +56,7 @@ import java.util.regex.Pattern;
 
 /**
  * AbstractBeanDefinitionParser
- *
+ * TODO： 解析 dubbo xml配置，将配置信息 解析组装成 BeanDefinition ！
  * @export
  */
 public class DubboBeanDefinitionParser implements BeanDefinitionParser {
@@ -71,6 +71,15 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
         this.required = required;
     }
 
+
+    /**
+     * TODO : NamespaceHandlerSupport.parse
+     * @param element
+     * @param parserContext
+     * @param beanClass
+     * @param required
+     * @return
+     */
     @SuppressWarnings("unchecked")
     private static BeanDefinition parse(Element element, ParserContext parserContext, Class<?> beanClass, boolean required) {
         RootBeanDefinition beanDefinition = new RootBeanDefinition();

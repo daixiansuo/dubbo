@@ -123,6 +123,10 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     public PropertyValues postProcessPropertyValues(
             PropertyValues pvs, PropertyDescriptor[] pds, Object bean, String beanName) throws BeanCreationException {
 
+        /**
+         * 查找bean 下需要注入的相关成员（包括成员变量和方法，即被@DubboReference标注的成员，并把这些这些属性集合封装为一个对象InjectionMetadata，）
+         * InjectionMetadata 对象内部for 循环，一次注入相关的属性值。
+         */
         InjectionMetadata metadata = findInjectionMetadata(beanName, bean.getClass(), pvs);
         try {
             metadata.inject(bean, beanName, pvs);
