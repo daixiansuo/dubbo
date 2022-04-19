@@ -46,30 +46,39 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     private final ScheduledExecutorService retryExecutor = Executors.newScheduledThreadPool(1, new NamedThreadFactory("DubboRegistryFailedRetryTimer", true));
 
     // Timer for failure retry, regular check if there is a request for failure, and if there is, an unlimited retry
+    // 失败重试定时器，定时检查是否有失败请求，有则无限重试
     private final ScheduledFuture<?> retryFuture;
 
+    // 发起注册失败的URL集合
     private final Set<URL> failedRegistered = new ConcurrentHashSet<URL>();
 
+    // 取消注册失败的URL集合
     private final Set<URL> failedUnregistered = new ConcurrentHashSet<URL>();
 
+    // 发起订阅失败的监听器集合
     private final ConcurrentMap<URL, Set<NotifyListener>> failedSubscribed = new ConcurrentHashMap<URL, Set<NotifyListener>>();
 
+    // 取消订阅失败的监听器集合
     private final ConcurrentMap<URL, Set<NotifyListener>> failedUnsubscribed = new ConcurrentHashMap<URL, Set<NotifyListener>>();
 
+    // 通知失败的URL集合
     private final ConcurrentMap<URL, Map<NotifyListener, List<URL>>> failedNotified = new ConcurrentHashMap<URL, Map<NotifyListener, List<URL>>>();
 
     /**
      * The time in milliseconds the retryExecutor will wait
+     * TODO: retryExecutor 将等待的时间（以毫秒为单位）
      */
     private final int retryPeriod;
 
     public FailbackRegistry(URL url) {
         super(url);
+        // 获取重试间隔周期，默认 5000ms = 5s
         this.retryPeriod = url.getParameter(Constants.REGISTRY_RETRY_PERIOD_KEY, Constants.DEFAULT_REGISTRY_RETRY_PERIOD);
         this.retryFuture = retryExecutor.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
                 // Check and connect to the registry
+                // 检查并连接到注册表，默认每 5s 执行一次
                 try {
                     retry();
                 } catch (Throwable t) { // Defensive fault tolerance
@@ -134,11 +143,13 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         failedUnregistered.remove(url);
         try {
             // Sending a registration request to the server side
+            // 调用具体的注册中心实现，向服务器端发送注册请求
             doRegister(url);
         } catch (Exception e) {
             Throwable t = e;
 
             // If the startup detection is opened, the Exception is thrown directly.
+            // 如果开启了启动检测，则直接抛出Exception。
             boolean check = getUrl().getParameter(Constants.CHECK_KEY, true)
                     && url.getParameter(Constants.CHECK_KEY, true)
                     && !Constants.CONSUMER_PROTOCOL.equals(url.getProtocol());
@@ -153,6 +164,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             }
 
             // Record a failed registration request to a failed list, retry regularly
+            // 将失败的注册请求记录到失败列表中，定期重试
             failedRegistered.add(url);
         }
     }
@@ -307,7 +319,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         }
     }
 
-    // Retry the failed actions
+    // Retry the failed actions  /  重试失败的操作
     protected void retry() {
         if (!failedRegistered.isEmpty()) {
             Set<URL> failed = new HashSet<URL>(failedRegistered);

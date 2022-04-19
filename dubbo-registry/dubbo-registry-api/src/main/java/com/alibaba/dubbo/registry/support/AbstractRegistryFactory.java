@@ -41,14 +41,16 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractRegistryFactory.class);
 
     // The lock for the acquisition process of the registry
+    // 注册表获取过程的锁
     private static final ReentrantLock LOCK = new ReentrantLock();
 
     // Registry Collection Map<RegistryAddress, Registry>
+    // 注册集合  key= registry address  value= 具体 registry
     private static final Map<String, Registry> REGISTRIES = new ConcurrentHashMap<String, Registry>();
 
     /**
      * Get all registries
-     *
+     * 获取所有注册表
      * @return all registries
      */
     public static Collection<Registry> getRegistries() {
@@ -57,8 +59,9 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
 
     /**
      * Close all created registries
+     * 关闭所有创建的注册表
      */
-    // TODO: 2017/8/30 to move somewhere else better
+    // TODO: 2017/8/30 to move somewhere else better == 搬到别的地方更好
     public static void destroyAll() {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Close all registries " + getRegistries());
@@ -87,6 +90,7 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
                 .removeParameters(Constants.EXPORT_KEY, Constants.REFER_KEY);
         String key = url.toServiceStringWithoutResolving();
         // Lock the registry access process to ensure a single instance of the registry
+        // 锁定注册表访问进程，确保注册表单实例
         LOCK.lock();
         try {
             Registry registry = REGISTRIES.get(key);

@@ -56,41 +56,60 @@ import java.util.concurrent.atomic.AtomicReference;
 public abstract class AbstractRegistry implements Registry {
 
     // URL address separator, used in file cache, service provider URL separation
+    // URL地址分隔符，用于文件缓存，服务提供者URL分隔
     private static final char URL_SEPARATOR = ' ';
+
     // URL address separated regular expression for parsing the service provider URL list in the file cache
+    // URL地址分隔正则表达式，用于解析文件缓存中的服务提供者URL列表
     private static final String URL_SPLIT = "\\s+";
+
     // Log output
     protected final Logger logger = LoggerFactory.getLogger(getClass());
+
     // Local disk cache, where the special key value.registies records the list of registry centers, and the others are the list of notified service providers
+    // 本地磁盘缓存，其中特殊键值.registies 记录注册中心列表，其他为通知服务提供者列表
     private final Properties properties = new Properties();
+
     // File cache timing writing
+    // 文件缓存时序写入
     private final ExecutorService registryCacheExecutor = Executors.newFixedThreadPool(1, new NamedThreadFactory("DubboSaveRegistryCache", true));
+
     // Is it synchronized to save the file
+    // 是否同步保存文件，默认为异步
     private final boolean syncSaveFile;
+    // 异步保存使用
     private final AtomicLong lastCacheChanged = new AtomicLong();
     private final Set<URL> registered = new ConcurrentHashSet<URL>();
     private final ConcurrentMap<URL, Set<NotifyListener>> subscribed = new ConcurrentHashMap<URL, Set<NotifyListener>>();
+
+    // 内存中的服务缓存对象，key：消费者URL  value ==》 k:v  ==>  k 是分类，providers、consumers、routes、configurators； v 是对应的服务列表
+    // 对于没有服务提供者 提供服务的URL，则以 empty:// 前缀开头
     private final ConcurrentMap<URL, Map<String, List<URL>>> notified = new ConcurrentHashMap<URL, Map<String, List<URL>>>();
     private URL registryUrl;
     // Local disk cache file
+    // 本地磁盘缓存文件
     private File file;
 
     public AbstractRegistry(URL url) {
         setUrl(url);
         // Start file save timer
         syncSaveFile = url.getParameter(Constants.REGISTRY_FILESAVE_SYNC_KEY, false);
+        // eg: dubbo-registry-upgrade-consumer-175.24.191.169-8848.cache
         String filename = url.getParameter(Constants.FILE_KEY, System.getProperty("user.home") + "/.dubbo/dubbo-registry-" + url.getParameter(Constants.APPLICATION_KEY) + "-" + url.getAddress() + ".cache");
         File file = null;
         if (ConfigUtils.isNotEmpty(filename)) {
             file = new File(filename);
             if (!file.exists() && file.getParentFile() != null && !file.getParentFile().exists()) {
+                // 创建目录
                 if (!file.getParentFile().mkdirs()) {
                     throw new IllegalArgumentException("Invalid registry store file " + file + ", cause: Failed to create directory " + file.getParentFile() + "!");
                 }
             }
         }
         this.file = file;
+        // 从本地缓存文件 读取配置数据到 properties（内存）
         loadProperties();
+        // TODO： 通知 ？
         notify(url.getBackupUrls());
     }
 

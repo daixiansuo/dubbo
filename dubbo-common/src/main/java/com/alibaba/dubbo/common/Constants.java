@@ -453,16 +453,19 @@ public class Constants {
 
     /**
      * To decide whether register center saves file synchronously, the default value is asynchronously
+     * 决定注册中心是否同步保存文件，默认为异步
      */
     public static final String REGISTRY_FILESAVE_SYNC_KEY = "save.file";
 
     /**
      * Period of registry center's retry interval
+     * 注册中心重试间隔周期
      */
     public static final String REGISTRY_RETRY_PERIOD_KEY = "retry.period";
 
     /**
      * Default value for the period of retry interval in milliseconds: 5000
+     * 重试间隔的默认值，以毫秒为单位：5000
      */
     public static final int DEFAULT_REGISTRY_RETRY_PERIOD = 5 * 1000;
 
