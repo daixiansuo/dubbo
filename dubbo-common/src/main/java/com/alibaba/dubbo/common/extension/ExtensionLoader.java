@@ -68,8 +68,10 @@ public class ExtensionLoader<T> {
 
     private static final Pattern NAME_SEPARATOR = Pattern.compile("\\s*[,]+\\s*");
 
+    // 扩展类与对应的扩展类加载器缓存
     private static final ConcurrentMap<Class<?>, ExtensionLoader<?>> EXTENSION_LOADERS = new ConcurrentHashMap<Class<?>, ExtensionLoader<?>>();
 
+    // 扩展类与类初始化后的实例
     private static final ConcurrentMap<Class<?>, Object> EXTENSION_INSTANCES = new ConcurrentHashMap<Class<?>, Object>();
 
     // ==============================
@@ -78,17 +80,27 @@ public class ExtensionLoader<T> {
 
     private final ExtensionFactory objectFactory;
 
+    // 扩展类与对应的扩展类加载器缓存
     private final ConcurrentMap<Class<?>, String> cachedNames = new ConcurrentHashMap<Class<?>, String>();
 
+    // 普通扩展类缓存，不包括自适应拓展类和 Wrapper 类
     private final Holder<Map<String, Class<?>>> cachedClasses = new Holder<Map<String, Class<?>>>();
 
+    // 扩展名与@Activate的缓存
     private final Map<String, Activate> cachedActivates = new ConcurrentHashMap<String, Activate>();
+
+    // 扩展名与扩展对象缓存
     private final ConcurrentMap<String, Holder<Object>> cachedInstances = new ConcurrentHashMap<String, Holder<Object>>();
+
+    // 实例化后的自适应(Adaptive) 扩展对象，只 能同时存在一个
     private final Holder<Object> cachedAdaptiveInstance = new Holder<Object>();
+    // 自适应扩展类缓存
     private volatile Class<?> cachedAdaptiveClass = null;
+
     private String cachedDefaultName;
     private volatile Throwable createAdaptiveInstanceError;
 
+    // Wrapper类缓存
     private Set<Class<?>> cachedWrapperClasses;
 
     private Map<String, IllegalStateException> exceptions = new ConcurrentHashMap<String, IllegalStateException>();
