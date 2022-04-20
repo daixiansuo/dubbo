@@ -92,11 +92,12 @@ public class ExtensionLoader<T> {
     // 扩展名与扩展对象缓存
     private final ConcurrentMap<String, Holder<Object>> cachedInstances = new ConcurrentHashMap<String, Holder<Object>>();
 
-    // 实例化后的自适应(Adaptive) 扩展对象，只 能同时存在一个
+    // 实例化后的自适应(Adaptive) 扩展对象，只能同时存在一个
     private final Holder<Object> cachedAdaptiveInstance = new Holder<Object>();
     // 自适应扩展类缓存
     private volatile Class<?> cachedAdaptiveClass = null;
 
+    // SPI注解 value值，没有value为空
     private String cachedDefaultName;
     private volatile Throwable createAdaptiveInstanceError;
 
@@ -308,6 +309,8 @@ public class ExtensionLoader<T> {
         if ("true".equals(name)) {
             return getDefaultExtension();
         }
+
+        // cachedInstances  <==> 扩展名与扩展对象缓存  <==> ConcurrentMap<String, Holder<Object>>
         Holder<Object> holder = cachedInstances.get(name);
         if (holder == null) {
             cachedInstances.putIfAbsent(name, new Holder<Object>());
@@ -446,6 +449,10 @@ public class ExtensionLoader<T> {
 
     @SuppressWarnings("unchecked")
     public T getAdaptiveExtension() {
+        /**
+         * 1. 实例化后的自适应(Adaptive) 扩展对象，同时只能存在一个
+         * 2. cachedAdaptiveInstance  <==> Holder<Object>
+         */
         Object instance = cachedAdaptiveInstance.get();
         if (instance == null) {
             if (createAdaptiveInstanceError == null) {
@@ -496,20 +503,33 @@ public class ExtensionLoader<T> {
 
     @SuppressWarnings("unchecked")
     private T createExtension(String name) {
+        /**
+         * 1. 读取SPI对应路径下的配置文件 并根据配置加载所有扩展类并缓存（不初始化）
+         * 2. 所以 getExtensionClasses() 先从缓存获取，缓存不存在再加载
+         * 3. clazz 是接口的具体实现类
+         */
         Class<?> clazz = getExtensionClasses().get(name);
         if (clazz == null) {
             throw findException(name);
         }
         try {
+
+            // EXTENSION_INSTANCES  <==>  扩展类与类初始化后的实例  <==>  ConcurrentMap<Class<?>, Object>
             T instance = (T) EXTENSION_INSTANCES.get(clazz);
             if (instance == null) {
+                // clazz.newInstance()  创建实例对象
                 EXTENSION_INSTANCES.putIfAbsent(clazz, clazz.newInstance());
                 instance = (T) EXTENSION_INSTANCES.get(clazz);
             }
+
+            // setter 方法，扩展点自动注入
             injectExtension(instance);
+
+            // cachedWrapperClasses 在loadExtensionClasses()方法的过程中进行搜索赋值， 具体在 loadClass() 方法中处理。
             Set<Class<?>> wrapperClasses = cachedWrapperClasses;
             if (wrapperClasses != null && !wrapperClasses.isEmpty()) {
                 for (Class<?> wrapperClass : wrapperClasses) {
+                    // 初始化包装类
                     instance = injectExtension((T) wrapperClass.getConstructor(type).newInstance(instance));
                 }
             }
@@ -528,16 +548,27 @@ public class ExtensionLoader<T> {
                             && method.getParameterTypes().length == 1
                             && Modifier.isPublic(method.getModifiers())) {
                         /**
+                         * 检查 {@link DisableInject} 看看我们是否需要为这个属性自动注入
                          * Check {@link DisableInject} to see if we need auto injection for this property
                          */
                         if (method.getAnnotation(DisableInject.class) != null) {
                             continue;
                         }
+
+                        // 获取参数的类型
                         Class<?> pt = method.getParameterTypes()[0];
                         try {
+                            // eg: setProtocol()  <==> property = protocol
                             String property = method.getName().length() > 3 ? method.getName().substring(3, 4).toLowerCase() + method.getName().substring(4) : "";
+
+                            /**
+                             * 1. pt  <==> 是 set方法的入参的类型，property 为 instance 中的属性字段，其类型为 pt 。
+                             * 2. 尝试获取 pt 类型的扩展类，如果 pt 不是接口 或 不存在SPI注解等其他因素，返回为 null
+                             * 3. 如果存在扩展类，将对应实现类 设置到 property 上。
+                             */
                             Object object = objectFactory.getExtension(pt, property);
                             if (object != null) {
+                                // 将扩展对象 设置的对应的属性字段上， method <==> setXxx()
                                 method.invoke(instance, object);
                             }
                         } catch (Exception e) {
@@ -564,6 +595,12 @@ public class ExtensionLoader<T> {
         return clazz;
     }
 
+
+    /**
+     * 读取SPI对应路径下的配置文件 并根据配置加载所有扩展类并缓存（不初始化)
+     *
+     * @return cachedClasses
+     */
     private Map<String, Class<?>> getExtensionClasses() {
         Map<String, Class<?>> classes = cachedClasses.get();
         if (classes == null) {
@@ -579,6 +616,7 @@ public class ExtensionLoader<T> {
     }
 
     // synchronized in getExtensionClasses
+    // 读取SPI对应路径下的配置文件，加载所有扩展类（不初始化）
     private Map<String, Class<?>> loadExtensionClasses() {
         final SPI defaultAnnotation = type.getAnnotation(SPI.class);
         if (defaultAnnotation != null) {
@@ -601,6 +639,14 @@ public class ExtensionLoader<T> {
     }
 
     private void loadDirectory(Map<String, Class<?>> extensionClasses, String dir) {
+
+        /**
+         * TODO：注意，此处只是加载了对应 interface 的实现类。
+         * eg：fileName = MATA-INF/dubbo/com.alibaba.dubbo.rpc.cluster.LoadBalance
+         * ExtensionLoader eg：
+         *          LoadBalance balance = ExtensionLoader.getExtensionLoader(LoadBalance.class).getDefaultExtension();
+         *  fileName = dir + type.getName(), 此时 type = LoadBalance.class
+         */
         String fileName = dir + type.getName();
         try {
             Enumeration<java.net.URL> urls;
@@ -663,6 +709,14 @@ public class ExtensionLoader<T> {
                     type + ", class line: " + clazz.getName() + "), class "
                     + clazz.getName() + "is not subtype of interface.");
         }
+
+        /**
+         * <p>
+         *     当该注解放在实现类上，则整个实现类会直接作为默认实现，不再自动生成代码(装饰器类)。
+         *     在扩展点接口的多个实现里，只能有一个实现上可以加@Adaptive注解。如果多个 实现类都有该注解，
+         *     则会抛出异常:More than 1 adaptive class found0
+         * </p>
+         */
         if (clazz.isAnnotationPresent(Adaptive.class)) {
             if (cachedAdaptiveClass == null) {
                 cachedAdaptiveClass = clazz;
@@ -732,6 +786,7 @@ public class ExtensionLoader<T> {
     @SuppressWarnings("unchecked")
     private T createAdaptiveExtension() {
         try {
+            // 自动注入 setter
             return injectExtension((T) getAdaptiveExtensionClass().newInstance());
         } catch (Exception e) {
             throw new IllegalStateException("Can not create adaptive extension " + type + ", cause: " + e.getMessage(), e);
@@ -740,9 +795,18 @@ public class ExtensionLoader<T> {
 
     private Class<?> getAdaptiveExtensionClass() {
         getExtensionClasses();
+
+        /**
+         * <p>
+         *     如果 cachedAdaptiveClass 不为空，说明 type 接口的某一个实现类上 存在 Adaptive 注解。
+         *     此时 就不需要生成 装饰器的字节码类。
+         * </p>
+         */
         if (cachedAdaptiveClass != null) {
             return cachedAdaptiveClass;
         }
+
+        // 此时，Adaptive 注解存在方法上，需要生成字节码类（装饰器模式）。
         return cachedAdaptiveClass = createAdaptiveExtensionClass();
     }
 

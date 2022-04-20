@@ -66,6 +66,7 @@ public class SpringExtensionFactory implements ExtensionFactory {
         for (ApplicationContext context : contexts) {
             if (context.containsBean(name)) {
                 Object bean = context.getBean(name);
+                // 判断获取到的bean 是否为 type 的实例
                 if (type.isInstance(bean)) {
                     return (T) bean;
                 }
