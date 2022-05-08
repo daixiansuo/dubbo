@@ -359,7 +359,9 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void doExportUrls() {
+        // 获取当前服务对应的 注册中心实例（支持多注册中心）
         List<URL> registryURLs = loadRegistries(true);
+        // 如果服务指定暴露多个协议，则遍历依次暴露服务（dubbo、rest）
         for (ProtocolConfig protocolConfig : protocols) {
             doExportUrlsFor1Protocol(protocolConfig, registryURLs);
         }
@@ -371,6 +373,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             name = "dubbo";
         }
 
+        // 读取其它配置信息到 map，用于后续构造URL
         Map<String, String> map = new HashMap<String, String>();
         map.put(Constants.SIDE_KEY, Constants.PROVIDER_SIDE);
         map.put(Constants.DUBBO_VERSION_KEY, Version.getProtocolVersion());
@@ -380,6 +383,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         }
         appendParameters(map, application);
         appendParameters(map, module);
+        // 读取全局配置信息，会自动添加前缀
         appendParameters(map, provider, Constants.DEFAULT_KEY);
         appendParameters(map, protocolConfig);
         appendParameters(map, this);
@@ -475,6 +479,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
         String host = this.findConfigedHosts(protocolConfig, registryURLs, map);
         Integer port = this.findConfigedPorts(protocolConfig, name, map);
+        // TODO：构造服务暴露URL
         URL url = new URL(name, host, port, (contextPath == null || contextPath.length() == 0 ? "" : contextPath + "/") + path, map);
 
         if (ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class)
@@ -489,6 +494,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
             // export to local if the config is not remote (export to remote only when config is remote)
             if (!Constants.SCOPE_REMOTE.toString().equalsIgnoreCase(scope)) {
+                // 本地服务暴露
                 exportLocal(url);
             }
             // export to remote if the config is not local (export to local only when config is local)
@@ -497,10 +503,12 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                     logger.info("Export dubbo service " + interfaceClass.getName() + " to url " + url);
                 }
                 if (registryURLs != null && !registryURLs.isEmpty()) {
+                    // 遍历注册中列表 依次暴露服务
                     for (URL registryURL : registryURLs) {
                         url = url.addParameterIfAbsent(Constants.DYNAMIC_KEY, registryURL.getParameter(Constants.DYNAMIC_KEY));
                         URL monitorUrl = loadMonitor(registryURL);
                         if (monitorUrl != null) {
+                            // 如果配置了监控地址，则服务调用信息会上报
                             url = url.addParameterAndEncoded(Constants.MONITOR_KEY, monitorUrl.toFullString());
                         }
                         if (logger.isInfoEnabled()) {
@@ -508,18 +516,37 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                         }
 
                         // For providers, this is used to enable custom proxy to generate invoker
+                        // 对于提供者，这用于启用自定义代理以生成调用者
                         String proxy = url.getParameter(Constants.PROXY_KEY);
                         if (StringUtils.isNotEmpty(proxy)) {
                             registryURL = registryURL.addParameter(Constants.PROXY_KEY, proxy);
                         }
 
+                        // ref 是 <dubbo:service interface="org.apache.dubbo.samples.basic.api.DemoService" ref="demoService"/> 的实现类
+                        // 通过动态代理转换成 Invoker，registryURL 存储的是注册中心地址，使用 export 作为 key 追加服务元数据信息
                         Invoker<?> invoker = proxyFactory.getInvoker(ref, (Class) interfaceClass, registryURL.addParameterAndEncoded(Constants.EXPORT_KEY, url.toFullString()));
                         DelegateProviderMetaDataInvoker wrapperInvoker = new DelegateProviderMetaDataInvoker(invoker, this);
 
+
+                        /**
+                         * 在将服务实例ref转换成Invoker之后，如果有注册中心时，则会通过 RegistryProtocol#export 进行更细粒度的控制，比如先进行服务暴露再注册服务元数据。
+                         * 注册中心在做服务暴露时依次 做了以下几件事情。
+                         *
+                         * (1) 委托具体协议(Dubbo)进行服务暴露，创建NettyServer监听端口和保存服务实例。
+                         * (2) 创建注册中心对象，与注册中心创建TCP连接。
+                         * (3) 注册服务元数据到注册中心。
+                         * (4) 订阅configurators节点，监听服务动态属性变更事件。
+                         * (5) 服务销毁收尾工作，比如关闭端口、反注册服务信息等。
+                         */
+
+
+                        // 触发服务暴露（端口打开），然后进行服务元数据注册
                         Exporter<?> exporter = protocol.export(wrapperInvoker);
                         exporters.add(exporter);
+
                     }
                 } else {
+                    // 处理没有注册中心场景，直接暴露服务
                     Invoker<?> invoker = proxyFactory.getInvoker(ref, (Class) interfaceClass, url);
                     DelegateProviderMetaDataInvoker wrapperInvoker = new DelegateProviderMetaDataInvoker(invoker, this);
 

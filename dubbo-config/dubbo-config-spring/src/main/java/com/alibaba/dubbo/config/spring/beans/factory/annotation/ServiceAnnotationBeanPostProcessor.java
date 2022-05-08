@@ -103,9 +103,11 @@ public class ServiceAnnotationBeanPostProcessor implements BeanDefinitionRegistr
 
         // TODO：在向容器注册ServiceAnnotationBeanPostProcessor BeanDefinition时，packagesToScan 被赋值！
         // com.alibaba.dubbo.config.spring.context.annotation.DubboComponentScanRegistrar.registerServiceAnnotationBeanPostProcessor
+        // 获取用户注解配置的包扫描
         Set<String> resolvedPackagesToScan = resolvePackagesToScan(packagesToScan);
 
         if (!CollectionUtils.isEmpty(resolvedPackagesToScan)) {
+            // 触发 ServiceBean 定义和注入
             registerServiceBeans(resolvedPackagesToScan, registry);
         } else {
             if (logger.isWarnEnabled()) {
@@ -146,6 +148,7 @@ public class ServiceAnnotationBeanPostProcessor implements BeanDefinitionRegistr
             if (!CollectionUtils.isEmpty(beanDefinitionHolders)) {
 
                 for (BeanDefinitionHolder beanDefinitionHolder : beanDefinitionHolders) {
+                    // 注册 ServiceBean 定义并坐数据绑定和解析
                     registerServiceBean(beanDefinitionHolder, registry, scanner);
                 }
 

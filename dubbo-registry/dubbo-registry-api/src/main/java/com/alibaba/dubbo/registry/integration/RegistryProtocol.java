@@ -131,12 +131,24 @@ public class RegistryProtocol implements Protocol {
 
     @Override
     public <T> Exporter<T> export(final Invoker<T> originInvoker) throws RpcException {
+
+        /**
+         *
+         * 当服务真实调用时会触发各种拦 截器Filter, 这个是在哪里初始化的呢?
+         *
+         * 在进行服务暴露前，框架会做拦截器初始化，Dubbo 在加载 protocol 扩展点时会自动注入 ProtocolListenerWrapper 和 ProtocolFilterWrapper。
+         * 具体可以查看 ExtensionLoader#createExtension 方法，当中会 包装类的自动注入。
+         * protocol 的扩展点加载是在 ServiceConfig 中，protocol 属性默认赋值 通过 ExtensionLoader 进行获取扩展实现。
+         */
+
+
         //export invoker
         final ExporterChangeableWrapper<T> exporter = doLocalExport(originInvoker);
 
         URL registryUrl = getRegistryUrl(originInvoker);
 
         //registry provider
+        // 创建注册中心实例
         final Registry registry = getRegistry(originInvoker);
         final URL registeredProviderUrl = getRegisteredProviderUrl(originInvoker);
 
@@ -146,9 +158,11 @@ public class RegistryProtocol implements Protocol {
         ProviderConsumerRegTable.registerProvider(originInvoker, registryUrl, registeredProviderUrl);
 
         if (register) {
+            // 服务暴露之后，注册服务元数据
             register(registryUrl, registeredProviderUrl);
             ProviderConsumerRegTable.getProviderWrapper(originInvoker).setReg(true);
         }
+
 
         // Subscribe the override data
         // FIXME When the provider subscribes, it will affect the scene : a certain JVM exposes the service and call the same service. Because the subscribed is cached key with the name of the service, it causes the subscription information to cover.
@@ -331,6 +345,7 @@ public class RegistryProtocol implements Protocol {
         bounds.clear();
     }
 
+    // 调用委托
     public static class InvokerDelegete<T> extends InvokerWrapper<T> {
         private final Invoker<T> invoker;
 
