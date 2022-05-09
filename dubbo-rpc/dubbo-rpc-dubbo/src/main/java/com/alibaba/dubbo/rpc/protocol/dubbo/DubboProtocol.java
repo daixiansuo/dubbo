@@ -337,6 +337,7 @@ public class DubboProtocol extends AbstractProtocol {
     public <T> Invoker<T> refer(Class<T> serviceType, URL url) throws RpcException {
         optimizeSerialization(url);
         // create rpc invoker.
+        // getClients 方法调用中，会初始化客户端连接
         DubboInvoker<T> invoker = new DubboInvoker<T>(serviceType, url, getClients(url), invokers);
         invokers.add(invoker);
         return invoker;
@@ -415,8 +416,10 @@ public class DubboProtocol extends AbstractProtocol {
         try {
             // connection should be lazy
             if (url.getParameter(Constants.LAZY_CONNECT_KEY, false)) {
+                // 如果配置了 lazy 属性，则真实调用才会创建 TCP 连接
                 client = new LazyConnectExchangeClient(url, requestHandler);
             } else {
+                // 立即与远程连接
                 client = Exchangers.connect(url, requestHandler);
             }
         } catch (RemotingException e) {
