@@ -17,6 +17,11 @@
 
 package com.alibaba.dubbo.remoting;
 
+/**
+ * 可解码接口，两个作用
+ * 1. 在调用真正的 decode 方法实现的时候会有一些校验，判断是否可以解码，并且对解码失败会有一些消息设置。
+ * 2. 用来 message 核对。
+ */
 public interface Decodeable {
 
     void decode() throws Exception;

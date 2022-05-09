@@ -30,8 +30,15 @@ public abstract class AbstractChannel extends AbstractPeer implements Channel {
         super(url, handler);
     }
 
+    /**
+     * 该类是通道的抽象类，该类里面做的逻辑很简单，具体的发送消息逻辑在它 的子类中实现。
+     * @param message
+     * @param sent    already sent to socket?
+     * @throws RemotingException
+     */
     @Override
     public void send(Object message, boolean sent) throws RemotingException {
+        // 检测通道是否关闭
         if (isClosed()) {
             throw new RemotingException(this, "Failed to send message "
                     + (message == null ? "" : message.getClass().getName()) + ":" + message

@@ -35,6 +35,11 @@ import java.util.concurrent.Executors;
 import static com.alibaba.dubbo.common.Constants.SHARED_CONSUMER_EXECUTOR_PORT;
 import static com.alibaba.dubbo.common.Constants.SHARE_EXECUTOR_KEY;
 
+/**
+ * 该类跟AbstractChannelHandlerDelegate的作用类似，都是装饰模式中的装饰角色，其中的所有实现方法都直接调
+ * 用被装饰的handler属性的方法，该类是为了添加线程池的功能，它的子类都是去关心哪些消息是需要分发到线程池的，
+ * 哪些消息直接由I/O线程执行，现在版本有四种场景，也就是它的四个子类，下面我一一描述。
+ */
 public class WrappedChannelHandler implements ChannelHandlerDelegate {
 
     protected static final Logger logger = LoggerFactory.getLogger(WrappedChannelHandler.class);
@@ -54,11 +59,15 @@ public class WrappedChannelHandler implements ChannelHandlerDelegate {
         this.url = url;
 
         String componentKey;
+        // 如果是 consumer，即 client 端； consumer 端可以共享线程池；
         if (Constants.CONSUMER_SIDE.equalsIgnoreCase(url.getParameter(Constants.SIDE_KEY))) {
             componentKey = Constants.CONSUMER_SIDE;
+            // 是否共享线程池
             if (url.getParameter(SHARE_EXECUTOR_KEY, false)) {
+                // 从缓存中获取线程池
                 ExecutorService cExecutor = (ExecutorService) dataStore.get(componentKey, SHARED_CONSUMER_EXECUTOR_PORT);
                 if (cExecutor == null) {
+                    // 创建线程池，Adaptive =》从 url 参数中获得 threadpool 的值，匹配对应的 线程池
                     cExecutor = (ExecutorService) ExtensionLoader.getExtensionLoader(ThreadPool.class).getAdaptiveExtension().getExecutor(url);
                     dataStore.put(componentKey, SHARED_CONSUMER_EXECUTOR_PORT, cExecutor);
                     cExecutor = (ExecutorService) dataStore.get(componentKey, SHARED_CONSUMER_EXECUTOR_PORT);
@@ -70,7 +79,9 @@ public class WrappedChannelHandler implements ChannelHandlerDelegate {
             }
         } else {
             componentKey = Constants.EXECUTOR_SERVICE_COMPONENT_KEY;
+            // 创建线程池，Adaptive =》从 url 参数中获得 threadpool 的值，匹配对应的 线程池
             executor = (ExecutorService) ExtensionLoader.getExtensionLoader(ThreadPool.class).getAdaptiveExtension().getExecutor(url);
+            // 放到缓存中
             dataStore.put(componentKey, Integer.toString(url.getPort()), executor);
         }
     }
@@ -128,7 +139,9 @@ public class WrappedChannelHandler implements ChannelHandlerDelegate {
     }
 
     public ExecutorService getExecutorService() {
+        // 首先返回的不是共享线程池，是该类的线程池
         ExecutorService cexecutor = executor;
+        // 如果该类的线程池关闭或者为空，则返回的是共享线程池
         if (cexecutor == null || cexecutor.isShutdown()) {
             cexecutor = SHARED_EXECUTOR;
         }

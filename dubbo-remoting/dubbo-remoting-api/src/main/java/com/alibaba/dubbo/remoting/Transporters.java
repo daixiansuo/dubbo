@@ -24,11 +24,13 @@ import com.alibaba.dubbo.remoting.transport.ChannelHandlerDispatcher;
 
 /**
  * Transporter facade. (API, Static, ThreadSafe)
+ *
  */
 public class Transporters {
 
     static {
         // check duplicate jar package
+        // 检查重复的jar包
         Version.checkDuplicate(Transporters.class);
         Version.checkDuplicate(RemotingException.class);
     }
@@ -53,6 +55,9 @@ public class Transporters {
         } else {
             handler = new ChannelHandlerDispatcher(handlers);
         }
+
+        // 调用 Transporter#bind() 方法
+        // 例如实现NettyTransporter，则调用NettyTransporter的bind，并且返回相应的server
         return getTransporter().bind(url, handler);
     }
 
@@ -72,6 +77,9 @@ public class Transporters {
         } else {
             handler = new ChannelHandlerDispatcher(handlers);
         }
+
+        // 调用Transporter的实现类对象的connect方法。
+        // 例如实现NettyTransporter，则调用NettyTransporter的connect，并且返回相应的client
         return getTransporter().connect(url, handler);
     }
 

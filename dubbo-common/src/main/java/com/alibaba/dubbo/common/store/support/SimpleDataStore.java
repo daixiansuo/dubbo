@@ -35,6 +35,7 @@ public class SimpleDataStore implements DataStore {
         ConcurrentMap<String, Object> value = data.get(componentName);
         if (value == null) return new HashMap<String, Object>();
 
+        // 新创建，避免被修改
         return new HashMap<String, Object>(value);
     }
 

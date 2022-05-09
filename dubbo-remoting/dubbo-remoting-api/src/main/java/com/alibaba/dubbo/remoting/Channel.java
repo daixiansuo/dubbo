@@ -20,8 +20,12 @@ import java.net.InetSocketAddress;
 
 /**
  * Channel. (API/SPI, Prototype, ThreadSafe)
- *
- *
+ * <p>
+ * 通道，是通讯的载体。消息发送端 将消息发送到 通道中，消息接收端 从通道中读取消息。
+ * 即 channel 可读可写，并且可以异步读写。
+ * <p>
+ * channel 是 client 和 server 的传输桥梁。 且 channel 与 client 是一一对应的，即一个 channel 对应一个 client。
+ * 但是 channel 与 server 是 多对一关系，即一个server 对应多个 channel。
  *
  * @see com.alibaba.dubbo.remoting.Client
  * @see com.alibaba.dubbo.remoting.Server#getChannels()
@@ -31,6 +35,7 @@ public interface Channel extends Endpoint {
 
     /**
      * get remote address.
+     * 获取远程地址
      *
      * @return remote address.
      */
@@ -38,6 +43,7 @@ public interface Channel extends Endpoint {
 
     /**
      * is connected.
+     * 判断通道是否连接
      *
      * @return connected
      */
@@ -45,6 +51,7 @@ public interface Channel extends Endpoint {
 
     /**
      * has attribute.
+     * 判断是否有指定 key
      *
      * @param key key.
      * @return has or has not.
@@ -53,6 +60,7 @@ public interface Channel extends Endpoint {
 
     /**
      * get attribute.
+     * 获取指定 key 的值
      *
      * @param key key.
      * @return value.
@@ -61,6 +69,7 @@ public interface Channel extends Endpoint {
 
     /**
      * set attribute.
+     * 添加属性
      *
      * @param key   key.
      * @param value value.
@@ -69,6 +78,7 @@ public interface Channel extends Endpoint {
 
     /**
      * remove attribute.
+     * 删除属性
      *
      * @param key key.
      */

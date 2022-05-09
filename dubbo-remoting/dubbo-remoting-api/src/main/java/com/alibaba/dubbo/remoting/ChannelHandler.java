@@ -22,6 +22,8 @@ import com.alibaba.dubbo.common.extension.SPI;
 /**
  * ChannelHandler. (API, Prototype, ThreadSafe)
  *
+ * 负责 channel 中的逻辑处理，例如 发送消息到 通道；从通道接收 消息；等等。
+ *
  * @see com.alibaba.dubbo.remoting.Transporter#bind(com.alibaba.dubbo.common.URL, ChannelHandler)
  * @see com.alibaba.dubbo.remoting.Transporter#connect(com.alibaba.dubbo.common.URL, ChannelHandler)
  */
@@ -30,6 +32,7 @@ public interface ChannelHandler {
 
     /**
      * on channel connected.
+     * 连接到 指定通道
      *
      * @param channel channel.
      */
@@ -37,6 +40,7 @@ public interface ChannelHandler {
 
     /**
      * on channel disconnected.
+     * 断开 指定通道 连接
      *
      * @param channel channel.
      */
@@ -44,6 +48,7 @@ public interface ChannelHandler {
 
     /**
      * on message sent.
+     * 发送消息到 指定通道
      *
      * @param channel channel.
      * @param message message.
@@ -52,6 +57,7 @@ public interface ChannelHandler {
 
     /**
      * on message received.
+     * 从指定通道 接收消息
      *
      * @param channel channel.
      * @param message message.
@@ -60,6 +66,7 @@ public interface ChannelHandler {
 
     /**
      * on exception caught.
+     * 从指定通道 捕获异常
      *
      * @param channel   channel.
      * @param exception exception.

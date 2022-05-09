@@ -38,10 +38,13 @@ public abstract class AbstractCodec implements Codec2 {
     private static final Logger logger = LoggerFactory.getLogger(AbstractCodec.class);
 
     protected static void checkPayload(Channel channel, long size) throws IOException {
+        // 默认长度
         int payload = Constants.DEFAULT_PAYLOAD;
         if (channel != null && channel.getUrl() != null) {
+            // 从url中获得消息长度配置，没有使用默认配置  8M
             payload = channel.getUrl().getParameter(Constants.PAYLOAD_KEY, Constants.DEFAULT_PAYLOAD);
         }
+        // 如果消息长度过长，则报错
         if (payload > 0 && size > payload) {
             ExceedPayloadLimitException e = new ExceedPayloadLimitException("Data length too large: " + size + ", max payload: " + payload + ", channel: " + channel);
             logger.error(e);
@@ -49,6 +52,11 @@ public abstract class AbstractCodec implements Codec2 {
         }
     }
 
+    /**
+     * 获得序列化对象
+     * @param channel
+     * @return
+     */
     protected Serialization getSerialization(Channel channel) {
         return CodecSupport.getSerialization(channel.getUrl());
     }
@@ -61,7 +69,13 @@ public abstract class AbstractCodec implements Codec2 {
         return CodecSupport.getSerialization(channel.getUrl());
     }
 
+    /**
+     * 判断是否为客户端侧的通道。
+     * @param channel
+     * @return
+     */
     protected boolean isClientSide(Channel channel) {
+        // 获得是side对应的value
         String side = (String) channel.getAttribute(Constants.SIDE_KEY);
         if ("client".equals(side)) {
             return true;
@@ -70,10 +84,12 @@ public abstract class AbstractCodec implements Codec2 {
         } else {
             InetSocketAddress address = channel.getRemoteAddress();
             URL url = channel.getUrl();
+            // 判断url的主机地址是否和远程地址一样，如果是，则判断为client，如果不是，则判断为server
             boolean client = url.getPort() == address.getPort()
                     && NetUtils.filterLocalHost(url.getIp()).equals(
                     NetUtils.filterLocalHost(address.getAddress()
                             .getHostAddress()));
+            // 把value设置进去
             channel.setAttribute(Constants.SIDE_KEY, client ? "client"
                     : "server");
             return client;

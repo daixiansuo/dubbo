@@ -36,14 +36,22 @@ public abstract class AbstractEndpoint extends AbstractPeer implements Resetable
 
     private Codec2 codec;
 
+    /**
+     * 超时时间
+     */
     private int timeout;
 
+    /**
+     * 连接超时时间
+     */
     private int connectTimeout;
 
     public AbstractEndpoint(URL url, ChannelHandler handler) {
         super(url, handler);
         this.codec = getChannelCodec(url);
+        // 从URL中获取配置，如果没有，默认 1s
         this.timeout = url.getPositiveParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
+        // 从URL中获取配置，如果没有，默认 3s
         this.connectTimeout = url.getPositiveParameter(Constants.CONNECT_TIMEOUT_KEY, Constants.DEFAULT_CONNECT_TIMEOUT);
     }
 
@@ -64,6 +72,7 @@ public abstract class AbstractEndpoint extends AbstractPeer implements Resetable
                     + url + ", cause: Channel closed. channel: " + getLocalAddress());
         }
         try {
+            // 判断重置的url中有没有携带timeout，有的话重置
             if (url.hasParameter(Constants.TIMEOUT_KEY)) {
                 int t = url.getParameter(Constants.TIMEOUT_KEY, 0);
                 if (t > 0) {
@@ -74,6 +83,7 @@ public abstract class AbstractEndpoint extends AbstractPeer implements Resetable
             logger.error(t.getMessage(), t);
         }
         try {
+            // 判断重置的url中有没有携带connect.timeout，有的话重置
             if (url.hasParameter(Constants.CONNECT_TIMEOUT_KEY)) {
                 int t = url.getParameter(Constants.CONNECT_TIMEOUT_KEY, 0);
                 if (t > 0) {
@@ -84,6 +94,7 @@ public abstract class AbstractEndpoint extends AbstractPeer implements Resetable
             logger.error(t.getMessage(), t);
         }
         try {
+            // 判断重置的url中有没有携带codec，有的话重置
             if (url.hasParameter(Constants.CODEC_KEY)) {
                 this.codec = getChannelCodec(url);
             }

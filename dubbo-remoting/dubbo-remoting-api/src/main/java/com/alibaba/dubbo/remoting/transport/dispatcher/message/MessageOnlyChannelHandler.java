@@ -37,6 +37,7 @@ public class MessageOnlyChannelHandler extends WrappedChannelHandler {
     public void received(Channel channel, Object message) throws RemotingException {
         ExecutorService cexecutor = getExecutorService();
         try {
+            // 所有消息 都分发到线程池
             cexecutor.execute(new ChannelEventRunnable(channel, handler, ChannelState.RECEIVED, message));
         } catch (Throwable t) {
             throw new ExecutionException(message, channel, getClass() + " error when process received event .", t);

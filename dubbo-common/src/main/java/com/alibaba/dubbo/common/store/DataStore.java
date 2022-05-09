@@ -26,6 +26,7 @@ public interface DataStore {
 
     /**
      * return a snapshot value of componentName
+     * 返回 componentName 的快照值
      */
     Map<String, Object> get(String componentName);
 

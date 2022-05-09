@@ -22,6 +22,10 @@ import com.alibaba.dubbo.common.Resetable;
  * Remoting Client. (API/SPI, Prototype, ThreadSafe)
  * <p>
  * <a href="http://en.wikipedia.org/wiki/Client%E2%80%93server_model">Client/Server</a>
+ * <p>
+ * Client 继承 Endpoint， 是因为抽象出的公共方法。
+ * Client 继承 Channel，是因为 Channel 与 Client 是一一对应的，所以如此设计。
+ * Client 继承 Resetable，是因为 重置功能 需要继承统一接口，但是已经不推荐使用。
  *
  * @see com.alibaba.dubbo.remoting.Transporter#connect(com.alibaba.dubbo.common.URL, ChannelHandler)
  */
@@ -29,9 +33,15 @@ public interface Client extends Endpoint, Channel, Resetable {
 
     /**
      * reconnect.
+     * 重新连接
      */
     void reconnect() throws RemotingException;
 
+    /**
+     * 重置
+     *
+     * @param parameters
+     */
     @Deprecated
     void reset(com.alibaba.dubbo.common.Parameters parameters);
 
