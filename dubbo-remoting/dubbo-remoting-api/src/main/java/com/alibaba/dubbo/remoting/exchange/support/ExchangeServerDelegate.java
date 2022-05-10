@@ -28,6 +28,9 @@ import java.util.Collection;
 
 /**
  * ExchangeServerDelegate
+ * <p>
+ * 该类实现了ExchangeServer接口，是信息交换服务器装饰者，是ExchangeServer的装饰器。
+ * 该类就一个属性ExchangeServer server，所有实现方法都调用了server属性的方法
  */
 public class ExchangeServerDelegate implements ExchangeServer {
 

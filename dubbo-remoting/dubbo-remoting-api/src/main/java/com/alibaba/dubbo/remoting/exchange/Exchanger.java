@@ -34,9 +34,10 @@ public interface Exchanger {
 
     /**
      * bind.
+     * 绑定一个服务器
      *
-     * @param url
-     * @param handler
+     * @param url     服务器url
+     * @param handler 数据交换处理器
      * @return message server
      */
     @Adaptive({Constants.EXCHANGER_KEY})
@@ -44,9 +45,10 @@ public interface Exchanger {
 
     /**
      * connect.
+     * 连接一个服务器，也就是创建一个客户端
      *
-     * @param url
-     * @param handler
+     * @param url     服务器url
+     * @param handler 数据交换处理器
      * @return message channel
      */
     @Adaptive({Constants.EXCHANGER_KEY})

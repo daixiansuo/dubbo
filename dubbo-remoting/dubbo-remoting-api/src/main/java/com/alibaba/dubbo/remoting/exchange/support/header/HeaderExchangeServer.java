@@ -42,33 +42,56 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * ExchangeServerImpl
+ * 基于协议头的信息交换服务器实现类，HeaderExchangeServer是Server的装饰器，每个实现方法都会调用server的方法
  */
 public class HeaderExchangeServer implements ExchangeServer {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
+    /**
+     * 定时器线程池
+     */
     private final ScheduledExecutorService scheduled = Executors.newScheduledThreadPool(1,
             new NamedThreadFactory(
                     "dubbo-remoting-server-heartbeat",
                     true));
+    /**
+     * 服务器
+     */
     private final Server server;
-    // heartbeat timer
+    /**
+     * 心跳定时器
+     */
     private ScheduledFuture<?> heartbeatTimer;
-    // heartbeat timeout (ms), default value is 0 , won't execute a heartbeat.
+    /**
+     * 心跳周期，间隔多久发送心跳消息检测一次。 默认值为 0 ，不会执行心跳。
+     * heartbeat(ms), default value is 0 , won't execute a heartbeat.
+     */
     private int heartbeat;
+    /**
+     * 心跳超时时间
+     */
     private int heartbeatTimeout;
+    /**
+     * 信息交换服务器 是否关闭
+     */
     private AtomicBoolean closed = new AtomicBoolean(false);
+
 
     public HeaderExchangeServer(Server server) {
         if (server == null) {
             throw new IllegalArgumentException("server == null");
         }
         this.server = server;
+        // 从服务端url参数中 获取心跳周期配置，没有默认设置为 0
         this.heartbeat = server.getUrl().getParameter(Constants.HEARTBEAT_KEY, 0);
+        // 从服务端url参数中 获取心跳超时时间，不存在设置默认值：heartbeat * 3 <==> 心跳周期的三倍
         this.heartbeatTimeout = server.getUrl().getParameter(Constants.HEARTBEAT_TIMEOUT_KEY, heartbeat * 3);
+        // 检测心跳超时时间 是否小于 心跳周期的两倍
         if (heartbeatTimeout < heartbeat * 2) {
             throw new IllegalStateException("heartbeatTimeout < heartbeatInterval * 2");
         }
+        // 开启心跳
         startHeartbeatTimer();
     }
 
@@ -82,14 +105,16 @@ public class HeaderExchangeServer implements ExchangeServer {
     }
 
     private boolean isRunning() {
+        // 获取当前服务连接的所有通道
         Collection<Channel> channels = getChannels();
+        // 遍历所有通道
         for (Channel channel : channels) {
 
             /**
              *  If there are any client connections,
              *  our server should be running.
              */
-
+            // 如果有一个在连接状态，则服务还运行着
             if (channel.isConnected()) {
                 return true;
             }
@@ -99,19 +124,30 @@ public class HeaderExchangeServer implements ExchangeServer {
 
     @Override
     public void close() {
+        // 关闭心跳检测 和 定时器线程池
         doClose();
+        // 关闭服务器
         server.close();
     }
 
+    /**
+     * 优雅关闭
+     *
+     * @param timeout
+     */
     @Override
     public void close(final int timeout) {
+        // 开始关闭
         startClose();
+        // 判断超时时间
         if (timeout > 0) {
             final long max = (long) timeout;
             final long start = System.currentTimeMillis();
             if (getUrl().getParameter(Constants.CHANNEL_SEND_READONLYEVENT_KEY, true)) {
+                // 发送 READONLY_EVENT 事件给 所有连接该服务器的客户端，表示 Server 不可读了
                 sendChannelReadOnlyEvent();
             }
+            // 当服务器还在运行，并且没有超时，睡眠，也就是等待timeout左右时间在进行关闭
             while (HeaderExchangeServer.this.isRunning()
                     && System.currentTimeMillis() - start < max) {
                 try {
@@ -121,7 +157,9 @@ public class HeaderExchangeServer implements ExchangeServer {
                 }
             }
         }
+        // 关闭心跳检测 和 线程池
         doClose();
+        // 延迟关闭
         server.close(timeout);
     }
 
@@ -131,15 +169,20 @@ public class HeaderExchangeServer implements ExchangeServer {
     }
 
     private void sendChannelReadOnlyEvent() {
+        // READONLY_EVENT 事件的请求
         Request request = new Request();
         request.setEvent(Request.READONLY_EVENT);
+        // 不需要响应
         request.setTwoWay(false);
         request.setVersion(Version.getProtocolVersion());
 
+        // 获取当前server 上连接的所有客户端
         Collection<Channel> channels = getChannels();
         for (Channel channel : channels) {
             try {
+                // 通道是否处于连接状态
                 if (channel.isConnected())
+                    // 发送READONLY_EVENT事件
                     channel.send(request, getUrl().getParameter(Constants.CHANNEL_READONLYEVENT_SENT_KEY, true));
             } catch (RemotingException e) {
                 logger.warn("send cannot write message error.", e);
@@ -151,8 +194,10 @@ public class HeaderExchangeServer implements ExchangeServer {
         if (!closed.compareAndSet(false, true)) {
             return;
         }
+        // 关闭心跳检测
         stopHeartbeatTimer();
         try {
+            // 关闭线程池
             scheduled.shutdown();
         } catch (Throwable t) {
             logger.warn(t.getMessage(), t);
@@ -162,8 +207,10 @@ public class HeaderExchangeServer implements ExchangeServer {
     @Override
     public Collection<ExchangeChannel> getExchangeChannels() {
         Collection<ExchangeChannel> exchangeChannels = new ArrayList<ExchangeChannel>();
+        // 获得连接该服务器的 通道集合
         Collection<Channel> channels = server.getChannels();
         if (channels != null && !channels.isEmpty()) {
+            // 遍历通道集合，为每个通道都创建 信息交换通道，并且加入信息交换通道集合
             for (Channel channel : channels) {
                 exchangeChannels.add(HeaderExchangeChannel.getOrAddChannel(channel));
             }
@@ -210,8 +257,10 @@ public class HeaderExchangeServer implements ExchangeServer {
 
     @Override
     public void reset(URL url) {
+        // 重置属性
         server.reset(url);
         try {
+            // 重置 心跳周期 与 心跳超时时间，并且重新开始心跳检测
             if (url.hasParameter(Constants.HEARTBEAT_KEY)
                     || url.hasParameter(Constants.HEARTBEAT_TIMEOUT_KEY)) {
                 int h = url.getParameter(Constants.HEARTBEAT_KEY, heartbeat);
@@ -222,6 +271,7 @@ public class HeaderExchangeServer implements ExchangeServer {
                 if (h != heartbeat || t != heartbeatTimeout) {
                     heartbeat = h;
                     heartbeatTimeout = t;
+                    // 开启心跳检测
                     startHeartbeatTimer();
                 }
             }
@@ -252,13 +302,21 @@ public class HeaderExchangeServer implements ExchangeServer {
         server.send(message, sent);
     }
 
+    /**
+     * 开始心跳，跟HeaderExchangeClient类中的开始心跳方法唯一区别是获得的通道不一样，
+     * 客户端跟通道是一一对应的，所有只要对一个通道进行心跳检测，而服务端跟通道是一对多的关系，
+     * 所有需要对该服务器连接的所有通道进行心跳检测。
+     */
     private void startHeartbeatTimer() {
+        // 停止现有的心跳检测
         stopHeartbeatTimer();
         if (heartbeat > 0) {
+            // 创建心跳检测定时器
             heartbeatTimer = scheduled.scheduleWithFixedDelay(
                     new HeartBeatTask(new HeartBeatTask.ChannelProvider() {
                         @Override
                         public Collection<Channel> getChannels() {
+                            // 返回一个不可修改的 连接该服务器的 信息交换通道集合
                             return Collections.unmodifiableCollection(
                                     HeaderExchangeServer.this.getChannels());
                         }
@@ -271,6 +329,7 @@ public class HeaderExchangeServer implements ExchangeServer {
         try {
             ScheduledFuture<?> timer = heartbeatTimer;
             if (timer != null && !timer.isCancelled()) {
+                // 取消定时器
                 timer.cancel(true);
             }
         } catch (Throwable t) {

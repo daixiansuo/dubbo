@@ -23,6 +23,7 @@ import com.alibaba.dubbo.remoting.telnet.support.TelnetHandlerAdapter;
 
 /**
  * ExchangeHandlerAdapter
+ * 适配器类，该类直接让ExchangeHandler定义的方法reply返回null，交由它的子类选择性的去实现具体的回复请求结果。
  */
 public abstract class ExchangeHandlerAdapter extends TelnetHandlerAdapter implements ExchangeHandler {
 
