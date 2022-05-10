@@ -39,18 +39,37 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * DefaultMessageClient
+ * 主要增加的 心跳功能
  */
 public class HeaderExchangeClient implements ExchangeClient {
 
     private static final Logger logger = LoggerFactory.getLogger(HeaderExchangeClient.class);
 
+    /**
+     * 定时器线程池
+     */
     private static final ScheduledThreadPoolExecutor scheduled = new ScheduledThreadPoolExecutor(2, new NamedThreadFactory("dubbo-remoting-client-heartbeat", true));
+    /**
+     * 客户端
+     */
     private final Client client;
+    /**
+     * 信息交换通道
+     */
     private final ExchangeChannel channel;
-    // heartbeat timer
+    /**
+     * 心跳定时器
+     * heartbeat timer
+     */
     private ScheduledFuture<?> heartbeatTimer;
-    // heartbeat(ms), default value is 0 , won't execute a heartbeat.
+    /**
+     * 心跳周期，间隔多久发送心跳消息检测一次。 默认值为 0 ，不会执行心跳。
+     * heartbeat(ms), default value is 0 , won't execute a heartbeat.
+     */
     private int heartbeat;
+    /**
+     * 心跳超时时间
+     */
     private int heartbeatTimeout;
 
     public HeaderExchangeClient(Client client, boolean needHeartbeat) {
@@ -58,13 +77,19 @@ public class HeaderExchangeClient implements ExchangeClient {
             throw new IllegalArgumentException("client == null");
         }
         this.client = client;
+        // 创建信息交换通道
         this.channel = new HeaderExchangeChannel(client);
+        // 从客户端url参数中 获取dubbo版本
         String dubbo = client.getUrl().getParameter(Constants.DUBBO_VERSION_KEY);
+        // 从客户端url参数中 获取心跳周期配置。如果不存在，且当dubbo是1.0.x 版本的，则设置为 1分钟，否则设置为 0。
         this.heartbeat = client.getUrl().getParameter(Constants.HEARTBEAT_KEY, dubbo != null && dubbo.startsWith("1.0.") ? Constants.DEFAULT_HEARTBEAT : 0);
+        // 从客户端url参数中 获取心跳超时时间，不存在设置默认值：heartbeat * 3 <==> 心跳周期的三倍
         this.heartbeatTimeout = client.getUrl().getParameter(Constants.HEARTBEAT_TIMEOUT_KEY, heartbeat * 3);
+        // 检测心跳超时时间 是否小于 心跳周期的两倍
         if (heartbeatTimeout < heartbeat * 2) {
             throw new IllegalStateException("heartbeatTimeout < heartbeatInterval * 2");
         }
+        // 根据传递参数，决定是否开启心跳
         if (needHeartbeat) {
             startHeartbeatTimer();
         }
@@ -181,12 +206,17 @@ public class HeaderExchangeClient implements ExchangeClient {
     }
 
     private void startHeartbeatTimer() {
+        // 先停止现有的心跳线程
         stopHeartbeatTimer();
+        // 检验 心跳周期，heartbeat = 0，不开启心跳
         if (heartbeat > 0) {
+            // 创建心跳定时器
             heartbeatTimer = scheduled.scheduleWithFixedDelay(
+                    // 创建心跳线程
                     new HeartBeatTask(new HeartBeatTask.ChannelProvider() {
                         @Override
                         public Collection<Channel> getChannels() {
+                            // 返回一个 只包含 HeaderExchangeClient 对象的不可变列表
                             return Collections.<Channel>singletonList(HeaderExchangeClient.this);
                         }
                     }, heartbeat, heartbeatTimeout),
@@ -197,7 +227,9 @@ public class HeaderExchangeClient implements ExchangeClient {
     private void stopHeartbeatTimer() {
         if (heartbeatTimer != null && !heartbeatTimer.isCancelled()) {
             try {
+                // 取消定时器
                 heartbeatTimer.cancel(true);
+                // 取消已排队任务，用于回收空间
                 scheduled.purge();
             } catch (Throwable e) {
                 if (logger.isWarnEnabled()) {
