@@ -20,6 +20,11 @@ import java.nio.ByteBuffer;
 
 public interface ChannelBufferFactory {
 
+    /**
+     * 获取缓冲区实例
+     * @param capacity 容量
+     * @return ChannelBuffer
+     */
     ChannelBuffer getBuffer(int capacity);
 
     ChannelBuffer getBuffer(byte[] array, int offset, int length);

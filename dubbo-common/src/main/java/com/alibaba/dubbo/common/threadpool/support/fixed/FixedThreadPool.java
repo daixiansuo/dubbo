@@ -40,6 +40,9 @@ public class FixedThreadPool implements ThreadPool {
         String name = url.getParameter(Constants.THREAD_NAME_KEY, Constants.DEFAULT_THREAD_NAME);
         int threads = url.getParameter(Constants.THREADS_KEY, Constants.DEFAULT_THREADS);
         int queues = url.getParameter(Constants.QUEUES_KEY, Constants.DEFAULT_QUEUES);
+        // 队列容量 = 0，使用阻塞队列SynchronousQueue
+        // 队列容量 < 0, 使用无界阻塞队列LinkedBlockingQueue
+        // 队列容量 > 0, 使用有界阻塞队列LinkedBlockingQueue
         return new ThreadPoolExecutor(threads, threads, 0, TimeUnit.MILLISECONDS,
                 queues == 0 ? new SynchronousQueue<Runnable>() :
                         (queues < 0 ? new LinkedBlockingQueue<Runnable>()

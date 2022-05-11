@@ -24,12 +24,24 @@ import java.nio.ByteBuffer;
 
 public abstract class AbstractChannelBuffer implements ChannelBuffer {
 
+    /**
+     * 读索引
+     */
     private int readerIndex;
 
+    /**
+     * 写索引
+     */
     private int writerIndex;
 
+    /**
+     * 标记读索引
+     */
     private int markedReaderIndex;
 
+    /**
+     * 标记写索引
+     */
     private int markedWriterIndex;
 
     @Override
@@ -328,6 +340,11 @@ public abstract class AbstractChannelBuffer implements ChannelBuffer {
                 ')';
     }
 
+    /**
+     * 检查可读字节
+     *
+     * @param minimumReadableBytes 最小可读字节
+     */
     protected void checkReadableBytes(int minimumReadableBytes) {
         if (readableBytes() < minimumReadableBytes) {
             throw new IndexOutOfBoundsException();

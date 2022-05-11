@@ -24,10 +24,22 @@ import java.nio.ByteBuffer;
 
 public class DynamicChannelBuffer extends AbstractChannelBuffer {
 
+    /**
+     * 通道缓存工厂
+     */
     private final ChannelBufferFactory factory;
 
+    /**
+     * 通道缓存区
+     */
     private ChannelBuffer buffer;
 
+    /**
+     * 构造方法
+     * 工厂默认是 HeapChannelBufferFactory
+     *
+     * @param estimatedLength 估计长度
+     */
     public DynamicChannelBuffer(int estimatedLength) {
         this(estimatedLength, HeapChannelBufferFactory.getInstance());
     }
@@ -39,29 +51,48 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
         if (factory == null) {
             throw new NullPointerException("factory");
         }
+        // 设置工厂
         this.factory = factory;
+        // 创建缓冲区
         buffer = factory.getBuffer(estimatedLength);
     }
 
+
+    /**
+     * 确保可写字节
+     *
+     * @param minWritableBytes 最小可写字节
+     */
     @Override
     public void ensureWritableBytes(int minWritableBytes) {
+        // 如果最小写入的字节数 不大于 可写的字节数，则结束
         if (minWritableBytes <= writableBytes()) {
             return;
         }
 
+        // 新增容量
         int newCapacity;
+        // 此缓冲区 可包含的字节数等于0
         if (capacity() == 0) {
+            // 新增容量设置为 1
             newCapacity = 1;
         } else {
+            // 否则，新增容量设置为 缓冲区可包含的字节数
             newCapacity = capacity();
         }
+        // 最小新增容量 = 当前的写索引 + 最新写入的字节数
         int minNewCapacity = writerIndex() + minWritableBytes;
+        // 当新增容量 小于 最小新增容量，循环加倍，重新设置新增容量
         while (newCapacity < minNewCapacity) {
+            // 新增容量左移一位，也就是加倍
             newCapacity <<= 1;
         }
 
+        // 通过工厂创建该容量大小的 缓冲区
         ChannelBuffer newBuffer = factory().getBuffer(newCapacity);
+        // 从原有的 buffer 中读取数据到 newBuffer 中
         newBuffer.writeBytes(buffer, 0, writerIndex());
+        // 替换掉原来的缓冲区
         buffer = newBuffer;
     }
 
@@ -74,8 +105,11 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
 
     @Override
     public ChannelBuffer copy(int index, int length) {
+        // 创建缓冲区，预计长度最小64，或者更大
         DynamicChannelBuffer copiedBuffer = new DynamicChannelBuffer(Math.max(length, 64), factory());
+        // 复制数据
         copiedBuffer.buffer = buffer.copy(index, length);
+        // 设置索引，读索引设置为 0，写索引设置为 copy 的数据长度
         copiedBuffer.setIndex(0, length);
         return copiedBuffer;
     }

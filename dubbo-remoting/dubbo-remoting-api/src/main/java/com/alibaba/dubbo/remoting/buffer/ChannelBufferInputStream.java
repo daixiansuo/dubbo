@@ -22,11 +22,21 @@ import java.io.InputStream;
 
 public class ChannelBufferInputStream extends InputStream {
 
+    /**
+     * 缓冲区
+     */
     private final ChannelBuffer buffer;
+    /**
+     * 记录开始读数据的 索引
+     */
     private final int startIndex;
+    /**
+     * 结束读数据的 索引
+     */
     private final int endIndex;
 
     public ChannelBufferInputStream(ChannelBuffer buffer) {
+        // readableBytes() 可读字节数
         this(buffer, buffer.readableBytes());
     }
 
@@ -42,11 +52,18 @@ public class ChannelBufferInputStream extends InputStream {
         }
 
         this.buffer = buffer;
+        // 记录开始读数据的索引
         startIndex = buffer.readerIndex();
+        // 设置结束读数据的索引
         endIndex = startIndex + length;
+        // 标记读索引
         buffer.markReaderIndex();
     }
 
+    /**
+     * 该方法是返回读了多少数据。
+     * @return int
+     */
     public int readBytes() {
         return buffer.readerIndex() - startIndex;
     }
@@ -77,10 +94,12 @@ public class ChannelBufferInputStream extends InputStream {
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
         int available = available();
+        // 判断是否还有数据可读
         if (available == 0) {
             return -1;
         }
 
+        // 获取需要读取的数据长度
         len = Math.min(available, len);
         buffer.readBytes(b, off, len);
         return len;

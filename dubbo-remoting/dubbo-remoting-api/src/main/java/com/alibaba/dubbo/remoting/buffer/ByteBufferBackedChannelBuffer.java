@@ -22,10 +22,19 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
+/**
+ * 基于 Java NIO 中的 ByteBuffer 来实现相关的读写数据等操作
+ */
 public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
 
+    /**
+     * 字节缓冲区
+     */
     private final ByteBuffer buffer;
 
+    /**
+     * 容量
+     */
     private final int capacity;
 
     public ByteBufferBackedChannelBuffer(ByteBuffer buffer) {
@@ -33,8 +42,11 @@ public class ByteBufferBackedChannelBuffer extends AbstractChannelBuffer {
             throw new NullPointerException("buffer");
         }
 
+        // 创建一个新的字节缓冲区，新缓冲区的大小将是此缓冲区的剩余容量
         this.buffer = buffer.slice();
+        // 返回buffer的剩余容量
         capacity = buffer.remaining();
+        // 设置写索引
         writerIndex(capacity);
     }
 
