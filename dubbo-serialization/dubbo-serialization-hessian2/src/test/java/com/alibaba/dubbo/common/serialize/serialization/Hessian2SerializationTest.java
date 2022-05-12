@@ -19,16 +19,15 @@ package com.alibaba.dubbo.common.serialize.serialization;
 import com.alibaba.dubbo.common.serialize.ObjectInput;
 import com.alibaba.dubbo.common.serialize.ObjectOutput;
 import com.alibaba.dubbo.common.serialize.hessian2.Hessian2Serialization;
-
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Date;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class Hessian2SerializationTest extends AbstractSerializationPersionFailTest {
     {
@@ -196,6 +195,57 @@ public class Hessian2SerializationTest extends AbstractSerializationPersionFailT
         } catch (ArrayIndexOutOfBoundsException e) {
         }
         // NOTE: Hessian2 throws ArrayIndexOutOfBoundsException instead of IOException, let's live with this.
+    }
+
+    @Test
+    public void testObejct() throws Exception {
+
+//        String[] data = new String[]{"1", "b"};
+
+        User data = new User();
+        data.setName("ss");
+        data.setTime(new Date());
+
+
+        ObjectOutput objectOutput = serialization.serialize(url, byteArrayOutputStream);
+        objectOutput.writeObject(data);
+        objectOutput.flushBuffer();
+
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(
+                byteArrayOutputStream.toByteArray());
+        ObjectInput deserialize = serialization.deserialize(url, byteArrayInputStream);
+
+        deserialize.readObject(User.class);
+
+        try {
+            deserialize.readObject(String[].class);
+            fail();
+        } catch (ArrayIndexOutOfBoundsException e) {
+        }
+        // NOTE: Hessian2 throws ArrayIndexOutOfBoundsException instead of IOException, let's live with this.
+    }
+
+
+    public static class User implements Serializable {
+        String name;
+
+        Date time;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public Date getTime() {
+            return time;
+        }
+
+        public void setTime(Date time) {
+            this.time = time;
+        }
     }
 
     @Ignore("type missing, Byte -> Integer")

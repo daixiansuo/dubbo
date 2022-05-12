@@ -26,6 +26,8 @@ public interface InvokerListener {
 
     /**
      * The invoker referred
+     * <p>
+     * 在服务引用的时候进行监听
      *
      * @param invoker
      * @throws RpcException
@@ -35,6 +37,7 @@ public interface InvokerListener {
 
     /**
      * The invoker destroyed.
+     * 销毁实体域
      *
      * @param invoker
      * @see com.alibaba.dubbo.rpc.Invoker#destroy()

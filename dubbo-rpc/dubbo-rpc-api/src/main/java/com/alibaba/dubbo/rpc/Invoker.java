@@ -20,6 +20,9 @@ import com.alibaba.dubbo.common.Node;
 
 /**
  * Invoker. (API/SPI, Prototype, ThreadSafe)
+ * ｜
+ * 该接口是实体域，它是dubbo的核心模型，其他模型都向它靠拢，或者转化成它，它代表了一个可执行体，可以向它发起invoke调用，
+ * 这个有可能是一个本地的实现，也可能是一个远程的实现，也可能是一个集群的实现。它代表了一次调用
  *
  * @see com.alibaba.dubbo.rpc.Protocol#refer(Class, com.alibaba.dubbo.common.URL)
  * @see com.alibaba.dubbo.rpc.InvokerListener
@@ -29,6 +32,7 @@ public interface Invoker<T> extends Node {
 
     /**
      * get service interface.
+     * 获得服务接口
      *
      * @return service interface.
      */
@@ -36,6 +40,7 @@ public interface Invoker<T> extends Node {
 
     /**
      * invoke.
+     * 调用下一个 会话域
      *
      * @param invocation
      * @return result

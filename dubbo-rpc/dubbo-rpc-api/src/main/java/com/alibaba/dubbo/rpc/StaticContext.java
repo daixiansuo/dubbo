@@ -28,8 +28,17 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class StaticContext extends ConcurrentHashMap<Object, Object> {
     private static final long serialVersionUID = 1L;
+    /**
+     * 系统名称
+     */
     private static final String SYSTEMNAME = "system";
+    /**
+     * 系统上下文集合，仅供内部使用
+     */
     private static final ConcurrentMap<String, StaticContext> context_map = new ConcurrentHashMap<String, StaticContext>();
+    /**
+     * 系统上下文名称
+     */
     private String name;
 
     private StaticContext(String name) {

@@ -20,6 +20,7 @@ import com.alibaba.dubbo.common.utils.StringUtils;
 
 /**
  * GenericException
+ * 该方法是通用的异常类。
  *
  * @export
  */
@@ -27,8 +28,14 @@ public class GenericException extends RuntimeException {
 
     private static final long serialVersionUID = -1182299763306599962L;
 
+    /**
+     * 异常类名
+     */
     private String exceptionClass;
 
+    /**
+     * 异常信息
+     */
     private String exceptionMessage;
 
     public GenericException() {

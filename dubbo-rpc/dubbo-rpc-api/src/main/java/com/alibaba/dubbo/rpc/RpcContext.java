@@ -40,6 +40,11 @@ import java.util.concurrent.TimeoutException;
  * Note: RpcContext is a temporary state holder. States in RpcContext changes every time when request is sent or received.
  * For example: A invokes B, then B invokes C. On service B, RpcContext saves invocation info from A to B before B
  * starts invoking C, and saves invocation info from B to C after B invokes C.
+ * <p>
+ * <p>
+ * 注意：RpcContext 是一个临时的状态持有者。每次发送或接收请求时，RpcContext 中的状态都会发生变化。
+ * 例如：A 调用 B，然后 B 调用 C。在服务 B 上，RpcContext 在 B 开始调用 C 之前将 A 的调用信息保存到 B，
+ * 并在 B 调用 C 之后将 B 的调用信息保存到 C。
  *
  * @export
  * @see com.alibaba.dubbo.rpc.filter.ContextFilter
@@ -48,6 +53,7 @@ public class RpcContext {
 
     /**
      * use internal thread local to improve performance
+     * 本地上下文，使用本地内部线程来提高性能
      */
     private static final InternalThreadLocal<RpcContext> LOCAL = new InternalThreadLocal<RpcContext>() {
         @Override
@@ -55,6 +61,10 @@ public class RpcContext {
             return new RpcContext();
         }
     };
+
+    /**
+     * 服务上下文
+     */
     private static final InternalThreadLocal<RpcContext> SERVER_LOCAL = new InternalThreadLocal<RpcContext>() {
         @Override
         protected RpcContext initialValue() {
@@ -62,33 +72,72 @@ public class RpcContext {
         }
     };
 
+    /**
+     * 附加值集合
+     */
     private final Map<String, String> attachments = new HashMap<String, String>();
+    /**
+     * 上下文值
+     */
     private final Map<String, Object> values = new HashMap<String, Object>();
+    /**
+     * 线程结果
+     */
     private Future<?> future;
 
+    /**
+     * URL集合
+     */
     private List<URL> urls;
 
+    /**
+     * 当前的URL
+     */
     private URL url;
 
+    /**
+     * 方法名称
+     */
     private String methodName;
 
+    /**
+     * 参数类型集合
+     */
     private Class<?>[] parameterTypes;
 
+    /**
+     * 参数集合
+     */
     private Object[] arguments;
 
+    /**
+     * 本地地址
+     */
     private InetSocketAddress localAddress;
 
+    /**
+     * 远程地址
+     */
     private InetSocketAddress remoteAddress;
+
+
     @Deprecated
-    private List<Invoker<?>> invokers;
+    private List<Invoker<?>> invokers;  // 实体域集合
     @Deprecated
-    private Invoker<?> invoker;
+    private Invoker<?> invoker;         // 实体域
     @Deprecated
-    private Invocation invocation;
+    private Invocation invocation;      // 会话域
 
     // now we don't use the 'values' map to hold these objects
     // we want these objects to be as generic as possible
+    // 现在我们不使用“值”映射来保存这些对象，我们希望这些对象尽可能通用
+    /**
+     * 请求
+     */
     private Object request;
+    /**
+     * 响应
+     */
     private Object response;
 
     protected RpcContext() {
@@ -96,6 +145,8 @@ public class RpcContext {
 
     /**
      * get server side context.
+     * <p>
+     * 获取服务器端上下文。
      *
      * @return server context
      */
@@ -105,6 +156,8 @@ public class RpcContext {
 
     /**
      * remove server side context.
+     * <p>
+     * 删除服务器端上下文。
      *
      * @see com.alibaba.dubbo.rpc.filter.ContextFilter
      */
@@ -132,8 +185,9 @@ public class RpcContext {
 
     /**
      * Get the request object of the underlying RPC protocol, e.g. HttpServletRequest
+     * 获取底层 RPC 协议的请求对象，例如 HttpServletRequest
      *
-     * @return null if the underlying protocol doesn't provide support for getting request
+     * @return null if the underlying protocol doesn't provide support for getting request / 如果底层协议不支持获取请求，则为 null
      */
     public Object getRequest() {
         return request;
@@ -165,6 +219,9 @@ public class RpcContext {
 
     /**
      * Get the response object of the underlying RPC protocol, e.g. HttpServletResponse
+     * <p>
+     * 获取底层 RPC 协议的响应对象，例如HttpServletResponse
+     * 如果底层协议不支持获取响应或响应不是指定类型，则返回 null
      *
      * @return null if the underlying protocol doesn't provide support for getting response or the response is not of the specified type
      */
@@ -179,6 +236,8 @@ public class RpcContext {
 
     /**
      * is provider side.
+     * <p>
+     * 是否是 服务提供方侧
      *
      * @return provider side.
      */
@@ -188,6 +247,8 @@ public class RpcContext {
 
     /**
      * is consumer side.
+     * <p>
+     * 是否是 服务消费方侧
      *
      * @return consumer side.
      */
@@ -602,6 +663,7 @@ public class RpcContext {
 
     /**
      * Async invocation. Timeout will be handled even if <code>Future.get()</code> is not called.
+     * 异步调用。即使未调用 <code>Future.get()<code> 也会处理超时。
      *
      * @param callable
      * @return get the return result from <code>future.get()</code>
@@ -665,6 +727,8 @@ public class RpcContext {
 
     /**
      * one way async call, send request only, and result is not required
+     * <p>
+     * 一种方式异步调用，只发送请求，不需要结果
      *
      * @param runnable
      */

@@ -34,23 +34,61 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class RpcStatus {
 
+    /**
+     * URL 对应的状态集合，Key => URL ， Value => RpcStatus 对象。
+     */
     private static final ConcurrentMap<String, RpcStatus> SERVICE_STATISTICS = new ConcurrentHashMap<String, RpcStatus>();
 
+    /**
+     * method 对应的状态集合，key：url  value：k=方法名称 methodName k=RpcStatus
+     */
     private static final ConcurrentMap<String, ConcurrentMap<String, RpcStatus>> METHOD_STATISTICS = new ConcurrentHashMap<String, ConcurrentMap<String, RpcStatus>>();
+    /**
+     * 已经没用啦
+     */
     private final ConcurrentMap<String, Object> values = new ConcurrentHashMap<String, Object>();
+
+    /**
+     * 活跃状态
+     */
     private final AtomicInteger active = new AtomicInteger();
+    /**
+     * 总的数量
+     */
     private final AtomicLong total = new AtomicLong();
+    /**
+     * 失败的数量
+     */
     private final AtomicInteger failed = new AtomicInteger();
+    /**
+     * 总调用时长
+     */
     private final AtomicLong totalElapsed = new AtomicLong();
+    /**
+     * 总调用失败时长
+     */
     private final AtomicLong failedElapsed = new AtomicLong();
+    /**
+     * 最大调用时长
+     */
     private final AtomicLong maxElapsed = new AtomicLong();
+    /**
+     * 最大调用失败时长
+     */
     private final AtomicLong failedMaxElapsed = new AtomicLong();
+    /**
+     * 最大调用成功时长
+     */
     private final AtomicLong succeededMaxElapsed = new AtomicLong();
 
     /**
      * Semaphore used to control concurrency limit set by `executes`
+     * 用于控制 `executes` 设置的并发限制的信号量
      */
     private volatile Semaphore executesLimit;
+    /**
+     * 用来控制`execution`设置的许可证
+     */
     private volatile int executesPermits;
 
     private RpcStatus() {
@@ -113,7 +151,9 @@ public class RpcStatus {
      * @param url
      */
     public static void beginCount(URL url, String methodName) {
+        // 对该 url 对应 活跃计数器 加一
         beginCount(getStatus(url));
+        // 对该方法 对活跃计数器 加一
         beginCount(getStatus(url, methodName));
     }
 
@@ -127,24 +167,35 @@ public class RpcStatus {
      * @param succeeded
      */
     public static void endCount(URL url, String methodName, long elapsed, boolean succeeded) {
+        // url对应的状态中计数器减一
         endCount(getStatus(url), elapsed, succeeded);
+        // 方法对应的状态中计数器减一
         endCount(getStatus(url, methodName), elapsed, succeeded);
     }
 
     private static void endCount(RpcStatus status, long elapsed, boolean succeeded) {
+        // 活跃计数器 减一
         status.active.decrementAndGet();
+        // 总计数器 加一
         status.total.incrementAndGet();
+        // 总调用时长 加上调用时长
         status.totalElapsed.addAndGet(elapsed);
+        // 如果 最大调用时长 小于 elapsed，更新最大值
         if (status.maxElapsed.get() < elapsed) {
             status.maxElapsed.set(elapsed);
         }
+        // 如果rpc调用成功
         if (succeeded) {
+            // 如果成最大调用成功时长小于elapsed，则设置最大调用成功时长
             if (status.succeededMaxElapsed.get() < elapsed) {
                 status.succeededMaxElapsed.set(elapsed);
             }
         } else {
+            // 失败计数器加一
             status.failed.incrementAndGet();
+            // 失败的过期数加上elapsed
             status.failedElapsed.addAndGet(elapsed);
+            // 总调用失败时长小于elapsed，则设置总调用失败时长
             if (status.failedMaxElapsed.get() < elapsed) {
                 status.failedMaxElapsed.set(elapsed);
             }
@@ -319,7 +370,7 @@ public class RpcStatus {
      * @return thread number semaphore
      */
     public Semaphore getSemaphore(int maxThreadNum) {
-        if(maxThreadNum <= 0) {
+        if (maxThreadNum <= 0) {
             return null;
         }
 

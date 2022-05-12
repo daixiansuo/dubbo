@@ -34,16 +34,34 @@ public class RpcInvocation implements Invocation, Serializable {
 
     private static final long serialVersionUID = -4355285085441097045L;
 
+    /**
+     * 方法名称
+     */
     private String methodName;
 
+    /**
+     * 参数类型列表
+     */
     private Class<?>[] parameterTypes;
 
+    /**
+     * 参数列表
+     */
     private Object[] arguments;
 
+    /**
+     * 附加值集合
+     */
     private Map<String, String> attachments;
 
+    /**
+     * 实体域
+     */
     private transient Invoker<?> invoker;
 
+    /**
+     * 属性集合
+     */
     private Map<Object, Object> attributes = new HashMap<Object, Object>(2);
 
     public RpcInvocation() {
