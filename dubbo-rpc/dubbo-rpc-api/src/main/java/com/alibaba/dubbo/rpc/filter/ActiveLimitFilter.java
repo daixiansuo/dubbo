@@ -28,6 +28,8 @@ import com.alibaba.dubbo.rpc.RpcStatus;
 
 /**
  * LimitInvokerFilter
+ * <p>
+ * 对于每个服务的每个方法的最大可并行调用数量限制的过滤器，它是在服务消费者侧的过滤。
  */
 @Activate(group = Constants.CONSUMER, value = Constants.ACTIVES_KEY)
 public class ActiveLimitFilter implements Filter {

@@ -161,6 +161,12 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                         || !type.equals(getter.getReturnType())) {
                     continue;
                 }
+                /**
+                 * 解析参数列表
+                 *      <dubbo:application name="demo-provider">
+                 *         <dubbo:parameter key="test" value="sss"/>
+                 *     </dubbo:application>
+                 */
                 if ("parameters".equals(property)) {
                     parameters = parseParameters(element.getChildNodes(), beanDefinition);
                 } else if ("methods".equals(property)) {
@@ -183,6 +189,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                             } else if ("protocol".equals(property) && value.indexOf(',') != -1) {
                                 parseMultiRef("protocols", value, beanDefinition, parserContext);
                             } else {
+                                // 字段引用
                                 Object reference;
                                 if (isPrimitive(type)) {
                                     if ("async".equals(property) && "false".equals(value)
@@ -194,6 +201,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                                         // backward compatibility for the default value in old version's xsd
                                         value = null;
                                     }
+                                    // 解析的value 赋值
                                     reference = value;
                                 } else if ("protocol".equals(property)
                                         && ExtensionLoader.getExtensionLoader(Protocol.class).hasExtension(value)
@@ -225,6 +233,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                                     reference = new RuntimeBeanReference(invokeRef);
                                     beanDefinition.getPropertyValues().addPropertyValue("oninvokeMethod", invokeRefMethod);
                                 } else {
+                                    // <dubbo:service interface="com.alibaba.dubbo.demo.DemoService" ref="demoService"/>
                                     if ("ref".equals(property) && parserContext.getRegistry().containsBeanDefinition(value)) {
                                         BeanDefinition refBean = parserContext.getRegistry().getBeanDefinition(value);
                                         if (!refBean.isSingleton()) {
@@ -233,6 +242,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                                     }
                                     reference = new RuntimeBeanReference(value);
                                 }
+                                // 设置bean对象属性值
                                 beanDefinition.getPropertyValues().addPropertyValue(propertyName, reference);
                             }
                         }

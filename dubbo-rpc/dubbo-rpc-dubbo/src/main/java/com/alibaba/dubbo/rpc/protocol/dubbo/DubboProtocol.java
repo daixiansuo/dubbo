@@ -74,17 +74,29 @@ public class DubboProtocol extends AbstractProtocol {
 
         @Override
         public Object reply(ExchangeChannel channel, Object message) throws RemotingException {
+
+            // 如果请求消息不属于 会话域，则抛出异常
             if (message instanceof Invocation) {
+
+                // 强制类型转换，RpcInvocation
                 Invocation inv = (Invocation) message;
+                // 获取暴露的服务 Invoker
                 Invoker<?> invoker = getInvoker(channel, inv);
+
                 // need to consider backward-compatibility if it's a callback
+                //如果是回调，则需要考虑向后兼容性
                 if (Boolean.TRUE.toString().equals(inv.getAttachments().get(IS_CALLBACK_SERVICE_INVOKE))) {
+                    // 获取 方法定义
                     String methodsStr = invoker.getUrl().getParameters().get("methods");
                     boolean hasMethod = false;
+                    // 如果只有一个方法定义
                     if (methodsStr == null || methodsStr.indexOf(",") == -1) {
+                        // 设置 会话域中是否有一致的方法定义标志
                         hasMethod = inv.getMethodName().equals(methodsStr);
                     } else {
+                        // 分割不同的方法
                         String[] methods = methodsStr.split(",");
+                        // 如果方法不止一个，则分割后遍历查询，找到了则设置为true
                         for (String method : methods) {
                             if (inv.getMethodName().equals(method)) {
                                 hasMethod = true;
@@ -92,6 +104,7 @@ public class DubboProtocol extends AbstractProtocol {
                             }
                         }
                     }
+                    // 如果没有该方法，则打印告警日志
                     if (!hasMethod) {
                         logger.warn(new IllegalStateException("The methodName " + inv.getMethodName()
                                 + " not found in callback service interface ,invoke will be ignored."
@@ -100,9 +113,14 @@ public class DubboProtocol extends AbstractProtocol {
                         return null;
                     }
                 }
+
+                // 设置远程地址
                 RpcContext.getContext().setRemoteAddress(channel.getRemoteAddress());
+                // 调用下一个调用链
                 return invoker.invoke(inv);
             }
+
+            // 抛出异常
             throw new RemotingException(channel, "Unsupported request: "
                     + (message == null ? null : (message.getClass().getName() + ": " + message))
                     + ", channel: consumer: " + channel.getRemoteAddress() + " --> provider: " + channel.getLocalAddress());

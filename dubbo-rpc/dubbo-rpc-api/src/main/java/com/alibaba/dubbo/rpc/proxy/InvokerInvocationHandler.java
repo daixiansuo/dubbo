@@ -24,6 +24,7 @@ import java.lang.reflect.Method;
 
 /**
  * InvokerHandler
+ * 动态代理， 具体执行调用的地方
  */
 public class InvokerInvocationHandler implements InvocationHandler {
 
@@ -35,8 +36,11 @@ public class InvokerInvocationHandler implements InvocationHandler {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        // 获得方法名称
         String methodName = method.getName();
+        // 获得方法参数类型
         Class<?>[] parameterTypes = method.getParameterTypes();
+        // 如果该方法所在的类是Object类型，则直接调用 invoke
         if (method.getDeclaringClass() == Object.class) {
             return method.invoke(invoker, args);
         }
@@ -49,6 +53,7 @@ public class InvokerInvocationHandler implements InvocationHandler {
         if ("equals".equals(methodName) && parameterTypes.length == 1) {
             return invoker.equals(args[0]);
         }
+        // 调用 invoke
         return invoker.invoke(new RpcInvocation(method, args)).recreate();
     }
 

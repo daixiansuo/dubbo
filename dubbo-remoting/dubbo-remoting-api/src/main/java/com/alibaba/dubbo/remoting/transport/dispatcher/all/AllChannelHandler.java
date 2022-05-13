@@ -58,6 +58,19 @@ public class AllChannelHandler extends WrappedChannelHandler {
         }
     }
 
+    /**
+     * 所有消息都调度到业务线程池处理，   不同消息类型 对应一个方法。
+     *
+     * 连接事件  = conected()
+     * 断开连接事件  = disconnected()
+     * 异常事件 = caught()
+     * 请求、响应、心跳  = received()
+     *
+     *
+     * @param channel
+     * @param message
+     * @throws RemotingException
+     */
     @Override
     public void received(Channel channel, Object message) throws RemotingException {
         ExecutorService cexecutor = getExecutorService();

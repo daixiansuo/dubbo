@@ -44,6 +44,10 @@ public class DecodeHandler extends AbstractChannelHandlerDelegate {
             decode(message);
         }
 
+        /**
+         * (request)message.getData <==> Request.mData 属性字段，此时为 DecodeableRpcInvocation 类型，所以可以进行数据解码
+         * Debug 数据：Request [id=0, version=2.0.2, twoway=true, event=false, broken=false, data=RpcInvocation [methodName=sayHello, parameterTypes=[class java.lang.String], arguments=[world], attachments={path=com.alibaba.dubbo.demo.DemoService, input=201, dubbo=2.0.2, interface=com.alibaba.dubbo.demo.DemoService, version=0.0.0}, attributes={serialization_id=2}]]
+         */
         // 如果是Request请求类型消息，则对请求中对请求数据解码
         if (message instanceof Request) {
             decode(((Request) message).getData());

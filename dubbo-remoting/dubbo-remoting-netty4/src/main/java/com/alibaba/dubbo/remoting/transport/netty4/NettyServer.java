@@ -88,7 +88,7 @@ public class NettyServer extends AbstractServer implements Server {
                         ch.pipeline()//.addLast("logging",new LoggingHandler(LogLevel.INFO))//for debug
                                 .addLast("decoder", adapter.getDecoder())
                                 .addLast("encoder", adapter.getEncoder())
-                                .addLast("handler", nettyServerHandler);
+                                .addLast("handler", nettyServerHandler); // TODO： 接收到 消息(请求) 处理的入口
                     }
                 });
         // bind

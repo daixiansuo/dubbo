@@ -68,6 +68,7 @@ public class Request {
 
     /**
      * 请求的数据
+     * Debug数据 ：RpcInvocation [methodName=sayHello, parameterTypes=[class java.lang.String], arguments=[world], attachments={path=com.alibaba.dubbo.demo.DemoService, input=201, dubbo=2.0.2, interface=com.alibaba.dubbo.demo.DemoService, version=0.0.0}, attributes={serialization_id=2}]
      */
     private Object mData;
 

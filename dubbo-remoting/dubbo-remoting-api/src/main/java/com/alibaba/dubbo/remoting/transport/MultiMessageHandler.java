@@ -41,7 +41,9 @@ public class MultiMessageHandler extends AbstractChannelHandlerDelegate {
     public void received(Channel channel, Object message) throws RemotingException {
         // 当消息为多消息时 循环交给handler处理接收到当消息
         if (message instanceof MultiMessage) {
+            // 强制转化为 MultiMessage
             MultiMessage list = (MultiMessage) message;
+            // 把各个消息进行发送
             for (Object obj : list) {
                 try {
                     handler.received(channel, obj);
