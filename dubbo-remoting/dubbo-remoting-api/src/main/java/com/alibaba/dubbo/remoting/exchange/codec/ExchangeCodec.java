@@ -325,18 +325,18 @@ public class ExchangeCodec extends TelnetCodec {
         Bytes.long2bytes(req.getId(), header, 4);
 
         // encode request data.
-        // 编码 `Request.data` 到 Body ，并写入到 Buffer
         int savedWriteIndex = buffer.writerIndex();
+        // 跳过 buffer 头部 16 个字节，用于序列化消息体
         buffer.writerIndex(savedWriteIndex + HEADER_LENGTH);
         ChannelBufferOutputStream bos = new ChannelBufferOutputStream(buffer);
-        // 对 body数据序列化
+        // 创建序列化对象
         ObjectOutput out = serialization.serialize(channel.getUrl(), bos);
         // 如果该请求是事件
         if (req.isEvent()) {
             // 特殊事件编码
             encodeEventData(channel, out, req.getData());
         } else {
-            // 正常请求编码
+            // 序列化请求调用，data 一般是 RpcInvocation
             encodeRequestData(channel, out, req.getData(), req.getVersion());
         }
         // 释放资源
@@ -346,22 +346,25 @@ public class ExchangeCodec extends TelnetCodec {
         }
         bos.flush();
         bos.close();
+        // TODO：返回写入了多少数据，即消息体长度
         int len = bos.writtenBytes();
-        // 检验消息长度
+        // 检验消息长度 是否超过默认 8MB 大小
         checkPayload(channel, len);
-        // 设置 96-127位：Body值
+        // 将消息长度 写入头部第 12 个字节的 偏移量（96-127位）
         Bytes.int2bytes(len, header, 12);
 
-        // write
-        // 把 header 写入到 buffer
+        // 定位指针到 报文头部开始位置
         buffer.writerIndex(savedWriteIndex);
-        buffer.writeBytes(header); // write header.
+        // 写入完整报文头部 到 buffer
+        buffer.writeBytes(header);
+        // 设置 writerIndex 到消息体结束位置
         buffer.writerIndex(savedWriteIndex + HEADER_LENGTH + len);
     }
 
     protected void encodeResponse(Channel channel, ChannelBuffer buffer, Response res) throws IOException {
         int savedWriteIndex = buffer.writerIndex();
         try {
+            // 获取指定或默认的序列化协议（Hessian2）
             Serialization serialization = getSerialization(channel);
             // header.
             // 创建16字节的字节数组
@@ -372,25 +375,29 @@ public class ExchangeCodec extends TelnetCodec {
 
             // set request and serialization flag.
             // 16-23位为serialization编号，用到或运算10000000|serialization编号，例如serialization编号为11111，则为00011111
-            // 此处优化一次运算
+
+            // 在第3个字节（19～23位）存储响应标识
             header[2] = serialization.getContentTypeId();
+            // 心跳事件
             if (res.isHeartbeat()) header[2] |= FLAG_EVENT;
-            // set response status.
+            // 在第 4 个字节存储响应状态
             byte status = res.getStatus();
             header[3] = status;
-            // set request id.
+            // 设置响应唯一标识（与请求标识一一对应）
             Bytes.long2bytes(res.getId(), header, 4);
 
+            // 空出 16 字节头部用于存储响应体报文
             buffer.writerIndex(savedWriteIndex + HEADER_LENGTH);
             ChannelBufferOutputStream bos = new ChannelBufferOutputStream(buffer);
             ObjectOutput out = serialization.serialize(channel.getUrl(), bos);
             // encode response data or error message.
+            // 编码响应数据或错误消息。
             if (status == Response.OK) {
                 if (res.isHeartbeat()) {
                     // 心跳编码
                     encodeHeartbeatData(channel, out, res.getResult());
                 } else {
-                    // 正常响应编码
+                    // 序列化响应调用，data 一般是 Result 对象
                     encodeResponseData(channel, out, res.getResult(), res.getVersion());
                 }
             } else out.writeUTF(res.getErrorMessage());
@@ -403,24 +410,29 @@ public class ExchangeCodec extends TelnetCodec {
             bos.close();
 
             int len = bos.writtenBytes();
-            // 校验消息长度
+            // 校验消息长度是否超过 默认的 8MB 大小
             checkPayload(channel, len);
-            // 设置96-127位：Body值
+            // 将消息长度写入 头部第12个字节偏移量（96 ～ 127位）
             Bytes.int2bytes(len, header, 12);
 
             // write
-            // 把header写入到buffer
+            // 定位指针到报文头部 开始位置
             buffer.writerIndex(savedWriteIndex);
+            // 写入完整报文头部到 buffer
             buffer.writeBytes(header); // write header.
+            // 设置 writerIndex 到消息体结束位置
             buffer.writerIndex(savedWriteIndex + HEADER_LENGTH + len);
         } catch (Throwable t) {
             // clear buffer
+            // 如果编码失败，则复位 buffer
             buffer.writerIndex(savedWriteIndex);
             // send error message to Consumer, otherwise, Consumer will wait till timeout.
+            // 将编码响应一次发送给 consumer，否则只能等待超时
             if (!res.isEvent() && res.getStatus() != Response.BAD_RESPONSE) {
                 Response r = new Response(res.getId(), res.getVersion());
                 r.setStatus(Response.BAD_RESPONSE);
 
+                // 长度超过默认限制异常
                 if (t instanceof ExceedPayloadLimitException) {
                     logger.warn(t.getMessage(), t);
                     try {
@@ -435,6 +447,7 @@ public class ExchangeCodec extends TelnetCodec {
                     logger.warn("Fail to encode response: " + res + ", send bad_response info instead, cause: " + t.getMessage(), t);
                     try {
                         r.setErrorMessage("Failed to send response: " + res + ", cause: " + StringUtils.toString(t));
+                        // 告知客户端编码失败的 具体原因
                         channel.send(r);
                         return;
                     } catch (RemotingException e) {
