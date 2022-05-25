@@ -49,8 +49,7 @@ public class ExchangeCodec extends TelnetCodec {
 
     // header length.
     /**
-     * 协议头长度 16字节 = 128 bits
-     * 不是协议头的长度，而是协议整体数据的长度， 具体可参考看 Dubbo 协议图
+     * 协议头部长度 16字节 = 128 bits。具体可参考看 Dubbo 协议图
      */
     protected static final int HEADER_LENGTH = 16;
 
@@ -122,11 +121,43 @@ public class ExchangeCodec extends TelnetCodec {
         }
     }
 
+    /**
+     * 整体实现解码过程中要解决 粘包和拆包（半包）问题。
+     * <p>
+     * 在 1 中，最多读取 Dubbo 报文头部（16字节），如果流中不足 16字节，则会把流中数据读取完毕。
+     * <p>
+     * 在 decode 方法中会先判断流当前位置是不是 Dubbo 报文开始处，在流中判断报文分割点是通过 2 判断的（0xdabb 魔法数）。
+     * <p>
+     * 如果当前流中没有遇到完整 Dubbo 报文（在 3 中会判断流可读字节数）。
+     * <p>
+     * 在 4 中，会为剩余可读流分配存储空间。
+     * <p>
+     * 在 5 中，会将流中数据全部读取 并追加在 header 数组中。
+     * <p>
+     * 当流被读取完后，会查找流中第一个 Dubbo 报文开始处的索引，在 6 中会将 buffer 索引指向流中第一个 Dubbo 报文开始处（0xdabb）。
+     * <p>
+     * 在 7 中，主要将流中从起始位置（初始 buffer 的 readerIndex） 到第一个 Dubbo 报文开始处的数据保存在 header中。用于 8 解码
+     * header 数据，目前常用的场景有 telnet 调用等。
+     * <p>
+     * 在正常场景中解析时，在 9 中首先判断当前可读取的字节是否多余 16 字节，否则等待更多网络数据到来。
+     * <p>
+     * 在 10 中，会判断 Dubbo 报文头部 包含的消息体长度，然后校验消息体长度是否超过限制（默认为 8MB）
+     * <p>
+     * 在 11 中，会校验这次解码能否处理整个报文。
+     * <p>
+     * 在 12 中，处理消息体解码，这个是强协议相关的，因此Dubbo协议重写了这部分实现。
+     *
+     * @param channel 通道
+     * @param buffer  缓冲区
+     * @return response ｜ request
+     * @throws IOException io异常
+     */
     @Override
     public Object decode(Channel channel, ChannelBuffer buffer) throws IOException {
         int readable = buffer.readableBytes();
-        // 读取前16字节的协议头数据，如果数据不满16字节，则读取全部
+        // TODO: 1. 最多读取 16 个字节，并分配存储空间, 即先处理 报文头部。
         byte[] header = new byte[Math.min(readable, HEADER_LENGTH)];
+        // 读取报文头部信息
         buffer.readBytes(header);
         // 解码
         return decode(channel, buffer, readable, header);
@@ -134,40 +165,44 @@ public class ExchangeCodec extends TelnetCodec {
 
     @Override
     protected Object decode(Channel channel, ChannelBuffer buffer, int readable, byte[] header) throws IOException {
-        // check magic number.
-        // 核对魔法数
+        // TODO: 2. 处理流 起始处不是 Dubbo 魔法数 0xdabb 的场景
         if (readable > 0 && header[0] != MAGIC_HIGH
                 || readable > 1 && header[1] != MAGIC_LOW) {
             int length = header.length;
-            // 将 buffer 完全复制到 `header` 数组中
+            // TODO: 3. 流中还有数据可以读取
             if (header.length < readable) {
+                // TODO: 4. 为 header 重新分配空间，用来存储流中所有可读字节
                 header = Bytes.copyOf(header, readable);
+                // TODO: 5. 将流中剩余字节 读取到 header 中
                 buffer.readBytes(header, length, readable - length);
             }
+            // 遍历header，尝试寻找 dubbo 报文开头处
             for (int i = 1; i < header.length - 1; i++) {
                 if (header[i] == MAGIC_HIGH && header[i + 1] == MAGIC_LOW) {
+                    // TODO: 6. 将buffer 读索引指向回 dubbo报文开头处
                     buffer.readerIndex(buffer.readerIndex() - header.length + i);
+                    // TODO: 7.  将流起始处至下一个 dubbo报文之间的数据 放到header 中。
                     header = Bytes.copyOf(header, i);
                     break;
                 }
             }
-            // telnet
+            // TODO: 8. 主要用于解析 header 数据，比如用于 telnet
             return super.decode(channel, buffer, readable, header);
         }
 
         // check length.
-        // Header 长度不够，返回需要更多的输入，解决拆包现象
+        // TODO: 9. 如果读取数据长度 小于 16字节，则期待更多数据（解决拆包）
         if (readable < HEADER_LENGTH) {
             return DecodeResult.NEED_MORE_INPUT;
         }
 
-        // get data length.
+        // TODO: 10. 提取头部存储的 报文长度，并校验长度是否超过限制。
         int len = Bytes.bytes2int(header, 12);
         // 检查信息头长度
         checkPayload(channel, len);
 
         int tt = len + HEADER_LENGTH;
-        // 总长度不够，返回需要更多的输入，解决拆包现象
+        // TODO： 11. 校验是否可以读取完整 dubbo 报文，否则期待更多数据
         if (readable < tt) {
             return DecodeResult.NEED_MORE_INPUT;
         }
@@ -176,10 +211,10 @@ public class ExchangeCodec extends TelnetCodec {
         ChannelBufferInputStream is = new ChannelBufferInputStream(buffer, len);
 
         try {
-            // 对body反序列化
-            return decodeBody(channel, is, header);
+            // TODO: 12. 解码消息体，is流是完整的 rpc 调用报文。
+            return decodeBody(channel, is, header);  // DubboCodec.decodeBody()
         } finally {
-            // 如果不可用
+            // TODO: 13. 如果解码过程有问题，则跳过这次 rpc 调用报文
             if (is.available() > 0) {
                 try {
                     if (logger.isWarnEnabled()) {
@@ -348,7 +383,7 @@ public class ExchangeCodec extends TelnetCodec {
         bos.close();
         // TODO：返回写入了多少数据，即消息体长度
         int len = bos.writtenBytes();
-        // 检验消息长度 是否超过默认 8MB 大小
+        // 检验消息体长度 是否超过默认 8MB 大小
         checkPayload(channel, len);
         // 将消息长度 写入头部第 12 个字节的 偏移量（96-127位）
         Bytes.int2bytes(len, header, 12);

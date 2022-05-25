@@ -62,15 +62,17 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
     @Override
     protected Object decodeBody(Channel channel, InputStream is, byte[] header) throws IOException {
         byte flag = header[2], proto = (byte) (flag & SERIALIZATION_MASK);
-        // get request id.
+        // 获取请求ID，响应ID与请求ID相同。
         long id = Bytes.bytes2long(header, 4);
+        // 根据标识 判断是请求或响应  响应：0  请求：1
         if ((flag & FLAG_REQUEST) == 0) {
-            // decode response.
+            // 创建 Response对象，设置响应ID
             Response res = new Response(id);
+            // 事件
             if ((flag & FLAG_EVENT) != 0) {
                 res.setEvent(Response.HEARTBEAT_EVENT);
             }
-            // get status.
+            // 状态
             byte status = header[3];
             res.setStatus(status);
             try {
@@ -86,13 +88,16 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
                                 CodecSupport.deserialize(channel.getUrl(), new ByteArrayInputStream(eventPayload), proto), eventPayload);
                     } else {
                         DecodeableRpcResult result;
+                        // 判断解码处理 是否在I/O线程处理， 默认是在 I/O线程处理。  通过 decode.in.io 来自定义处理方式。
                         if (channel.getUrl().getParameter(
                                 Constants.DECODE_IN_IO_THREAD_KEY,
                                 Constants.DEFAULT_DECODE_IN_IO_THREAD)) {
                             result = new DecodeableRpcResult(channel, res, is,
                                     (Invocation) getRequestData(id), proto);
+                            // 直接在 I/O 线程处理解码
                             result.decode();
                         } else {
+                            // 放在业务线程池解码
                             result = new DecodeableRpcResult(channel, res,
                                     new UnsafeByteArrayInputStream(readMessageData(is)),
                                     (Invocation) getRequestData(id), proto);
@@ -112,10 +117,13 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
             }
             return res;
         } else {
-            // decode request.
+            // 创建 Request 对象，并设置请求ID
             Request req = new Request(id);
+            // dubbo版本
             req.setVersion(Version.getProtocolVersion());
+            // 是否需要响应
             req.setTwoWay((flag & FLAG_TWOWAY) != 0);
+            // 是否是事件
             if ((flag & FLAG_EVENT) != 0) {
                 req.setEvent(Request.HEARTBEAT_EVENT);
             }
@@ -131,23 +139,27 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
                             CodecSupport.deserialize(channel.getUrl(), new ByteArrayInputStream(eventPayload), proto), eventPayload);
                 } else {
                     DecodeableRpcInvocation inv;
+                    // 判断解码处理 是否在I/O线程处理， 默认是在 I/O线程处理。  通过 decode.in.io 来自定义处理方式。
                     if (channel.getUrl().getParameter(
                             Constants.DECODE_IN_IO_THREAD_KEY,
                             Constants.DEFAULT_DECODE_IN_IO_THREAD)) {
+                        // 在 I/O 线程中直接解码
                         inv = new DecodeableRpcInvocation(channel, req, is, proto);
                         inv.decode();
                     } else {
+                        // 交给 Dubbo 业务线程池解码
                         inv = new DecodeableRpcInvocation(channel, req,
                                 new UnsafeByteArrayInputStream(readMessageData(is)), proto);
                     }
                     data = inv;
                 }
+                // 将RpcInvocation 作为 Request 的数据域
                 req.setData(data);
             } catch (Throwable t) {
                 if (log.isWarnEnabled()) {
                     log.warn("Decode request failed: " + t.getMessage(), t);
                 }
-                // bad request
+                // 解码失败，先做标记并存储异常
                 req.setBroken(true);
                 req.setData(t);
             }
