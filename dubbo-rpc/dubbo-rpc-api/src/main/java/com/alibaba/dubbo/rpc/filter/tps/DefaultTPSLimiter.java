@@ -30,27 +30,36 @@ public class DefaultTPSLimiter implements TPSLimiter {
 
     @Override
     public boolean isAllowable(URL url, Invocation invocation) {
+        // 获得 TPS 限制大小，默认 -1，不限制
         int rate = url.getParameter(Constants.TPS_LIMIT_RATE_KEY, -1);
+        // 获得 限流周期
         long interval = url.getParameter(Constants.TPS_LIMIT_INTERVAL_KEY,
                 Constants.DEFAULT_TPS_LIMIT_INTERVAL);
+
         String serviceKey = url.getServiceKey();
+        // 如果限制
         if (rate > 0) {
+            // 从集合中获得统计项
             StatItem statItem = stats.get(serviceKey);
+            // 如果为空，则新建
             if (statItem == null) {
                 stats.putIfAbsent(serviceKey,
                         new StatItem(serviceKey, rate, interval));
                 statItem = stats.get(serviceKey);
             } else {
                 //rate or interval has changed, rebuild
+                // 速率或间隔已更改，重建
                 if (statItem.getRate() != rate || statItem.getInterval() != interval) {
                     stats.put(serviceKey, new StatItem(serviceKey, rate, interval));
                     statItem = stats.get(serviceKey);
                 }
             }
+            // 返回是否允许
             return statItem.isAllowable();
         } else {
             StatItem statItem = stats.get(serviceKey);
             if (statItem != null) {
+                // 移除该服务的统计项
                 stats.remove(serviceKey);
             }
         }

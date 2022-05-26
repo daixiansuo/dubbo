@@ -40,20 +40,29 @@ public class CompatibleFilter implements Filter {
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
+        // 调用下一个调用链
         Result result = invoker.invoke(invocation);
+        // 如果方法前面没有$或者结果没有异常
         if (!invocation.getMethodName().startsWith("$") && !result.hasException()) {
             Object value = result.getValue();
             if (value != null) {
                 try {
+                    // 获得方法
                     Method method = invoker.getInterface().getMethod(invocation.getMethodName(), invocation.getParameterTypes());
+                    // 返回类型
                     Class<?> type = method.getReturnType();
                     Object newValue;
+                    // 序列化类型
                     String serialization = invoker.getUrl().getParameter(Constants.SERIALIZATION_KEY);
+                    // 如果 json 或者 fastjson
                     if ("json".equals(serialization)
                             || "fastjson".equals(serialization)) {
+                        // 获得方法的泛型返回值类型
                         Type gtype = method.getGenericReturnType();
+                        // 把结果进行类型转化
                         newValue = PojoUtils.realize(value, type, gtype);
                     } else if (!type.isInstance(value)) {
+                        // 如果是pojo ，则转化为 type 类型，如果不是，则进行兼容类型转化
                         newValue = PojoUtils.isPojo(type)
                                 ? PojoUtils.realize(value, type)
                                 : CompatibleTypeUtils.compatibleTypeConvert(value, type);
@@ -62,6 +71,7 @@ public class CompatibleFilter implements Filter {
                         newValue = value;
                     }
                     if (newValue != value) {
+                        // 重新设置RpcResult 的result
                         result = new RpcResult(newValue);
                     }
                 } catch (Throwable t) {

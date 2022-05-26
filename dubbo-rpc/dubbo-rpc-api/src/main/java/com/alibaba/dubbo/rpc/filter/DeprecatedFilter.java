@@ -30,6 +30,7 @@ import com.alibaba.dubbo.rpc.RpcException;
 import java.util.Set;
 
 /**
+ * 该过滤器的作用是调用了废弃的方法时打印错误日志。
  * DeprecatedInvokerFilter
  */
 @Activate(group = Constants.CONSUMER, value = Constants.DEPRECATED_KEY)
@@ -44,6 +45,7 @@ public class DeprecatedFilter implements Filter {
         String key = invoker.getInterface().getName() + "." + invocation.getMethodName();
         if (!logged.contains(key)) {
             logged.add(key);
+            // 从URL参数中 获取当前方法是否是 废弃方法，如果是，则打印异常日志
             if (invoker.getUrl().getMethodParameter(invocation.getMethodName(), Constants.DEPRECATED_KEY, false)) {
                 LOGGER.error("The service method " + invoker.getInterface().getName() + "." + getMethodSignature(invocation) + " is DEPRECATED! Declare from " + invoker.getUrl());
             }

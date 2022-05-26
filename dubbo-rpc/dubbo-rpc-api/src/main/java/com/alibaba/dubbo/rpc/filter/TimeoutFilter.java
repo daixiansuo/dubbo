@@ -29,6 +29,7 @@ import com.alibaba.dubbo.rpc.RpcException;
 import java.util.Arrays;
 
 /**
+ * 该过滤器是当服务调用超时的时候，记录告警日志。
  * Log any invocation timeout, but don't stop server from running
  */
 @Activate(group = Constants.PROVIDER)
@@ -39,8 +40,10 @@ public class TimeoutFilter implements Filter {
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
         long start = System.currentTimeMillis();
+        // 调用下一个调用链
         Result result = invoker.invoke(invocation);
         long elapsed = System.currentTimeMillis() - start;
+        // 如果服务调用超时，则打印告警日志
         if (invoker.getUrl() != null
                 && elapsed > invoker.getUrl().getMethodParameter(invocation.getMethodName(),
                 "timeout", Integer.MAX_VALUE)) {

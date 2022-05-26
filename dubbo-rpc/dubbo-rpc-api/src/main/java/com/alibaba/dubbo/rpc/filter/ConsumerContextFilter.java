@@ -29,6 +29,7 @@ import com.alibaba.dubbo.rpc.RpcInvocation;
 import com.alibaba.dubbo.rpc.RpcResult;
 
 /**
+ * 该过滤器做的是在当前的RpcContext中记录本地调用的一次状态信息。
  * ConsumerContextInvokerFilter
  */
 @Activate(group = Constants.CONSUMER, order = -10000)
@@ -36,20 +37,26 @@ public class ConsumerContextFilter implements Filter {
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
+        // 设置 rpc 上下文
         RpcContext.getContext()
                 .setInvoker(invoker)
                 .setInvocation(invocation)
                 .setLocalAddress(NetUtils.getLocalHost(), 0)
                 .setRemoteAddress(invoker.getUrl().getHost(),
                         invoker.getUrl().getPort());
+        // 如果该会话域是rpc 会话域
         if (invocation instanceof RpcInvocation) {
+            // 设置实体域
             ((RpcInvocation) invocation).setInvoker(invoker);
         }
         try {
+            // 调用
             RpcResult result = (RpcResult) invoker.invoke(invocation);
+            // 设置服务上下文  附加值
             RpcContext.getServerContext().setAttachments(result.getAttachments());
             return result;
         } finally {
+            // 清空附加值
             RpcContext.getContext().clearAttachments();
         }
     }

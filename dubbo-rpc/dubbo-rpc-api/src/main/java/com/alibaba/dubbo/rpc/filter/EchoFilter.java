@@ -26,6 +26,7 @@ import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.dubbo.rpc.RpcResult;
 
 /**
+ * 该过滤器是处理回声测试的方法。
  * EchoInvokerFilter
  */
 @Activate(group = Constants.PROVIDER, order = -110000)
@@ -33,6 +34,7 @@ public class EchoFilter implements Filter {
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation inv) throws RpcException {
+        // 如果调用的方法是回声测试的方法，则直接返回接口，否则，调用下一个调用链。
         if (inv.getMethodName().equals(Constants.$ECHO) && inv.getArguments() != null && inv.getArguments().length == 1)
             return new RpcResult(inv.getArguments()[0]);
         return invoker.invoke(inv);

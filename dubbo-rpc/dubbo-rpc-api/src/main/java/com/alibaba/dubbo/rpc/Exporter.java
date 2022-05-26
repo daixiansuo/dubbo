@@ -36,7 +36,7 @@ public interface Exporter<T> {
 
     /**
      * unexport.
-     * 取消爆率
+     * 取消暴露
      * <p>
      * <code>
      * getInvoker().destroy();

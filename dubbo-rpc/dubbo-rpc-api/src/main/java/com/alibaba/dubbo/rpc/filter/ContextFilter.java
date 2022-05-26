@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * 服务提供方 初始化 RpcContext 对象
  * ContextInvokerFilter
  */
 @Activate(group = Constants.PROVIDER, order = -10000)
@@ -38,7 +39,9 @@ public class ContextFilter implements Filter {
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
+        // 获得会话域的附加值
         Map<String, String> attachments = invocation.getAttachments();
+        // 删除异步属性，以避免传递个以下调用链
         if (attachments != null) {
             attachments = new HashMap<String, String>(attachments);
             attachments.remove(Constants.PATH_KEY);
@@ -49,6 +52,7 @@ public class ContextFilter implements Filter {
             attachments.remove(Constants.TIMEOUT_KEY);
             attachments.remove(Constants.ASYNC_KEY);// Remove async property to avoid being passed to the following invoke chain.
         }
+        // 在 rpc上下文添加一个 调用链的信息
         RpcContext.getContext()
                 .setInvoker(invoker)
                 .setInvocation(invocation)
@@ -59,6 +63,7 @@ public class ContextFilter implements Filter {
         // mreged from dubbox
         // we may already added some attachments into RpcContext before this filter (e.g. in rest protocol)
         if (attachments != null) {
+            // 把会话域中的 附加值全部 加入 RpcContext 中。
             if (RpcContext.getContext().getAttachments() != null) {
                 RpcContext.getContext().getAttachments().putAll(attachments);
             } else {
@@ -66,16 +71,20 @@ public class ContextFilter implements Filter {
             }
         }
 
+        // 如果会话域属于 rpc 的会话域，则设置实体域
         if (invocation instanceof RpcInvocation) {
             ((RpcInvocation) invocation).setInvoker(invoker);
         }
         try {
+            // 调用下一个调用链
             RpcResult result = (RpcResult) invoker.invoke(invocation);
-            // pass attachments to result
+            // 把附加值 加入到RcpResult
             result.addAttachments(RpcContext.getServerContext().getAttachments());
             return result;
         } finally {
+            // 移除本地上下文
             RpcContext.removeContext();
+            // 清空附加值
             RpcContext.getServerContext().clearAttachments();
         }
     }
