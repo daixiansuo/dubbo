@@ -34,9 +34,16 @@ public class ListenerInvokerWrapper<T> implements Invoker<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(ListenerInvokerWrapper.class);
 
+    /**
+     * invoker 对象
+     */
     private final Invoker<T> invoker;
 
+    /**
+     * 监听器集合
+     */
     private final List<InvokerListener> listeners;
+
 
     public ListenerInvokerWrapper(Invoker<T> invoker, List<InvokerListener> listeners) {
         if (invoker == null) {
@@ -44,10 +51,12 @@ public class ListenerInvokerWrapper<T> implements Invoker<T> {
         }
         this.invoker = invoker;
         this.listeners = listeners;
+        // 如果监听器列表不为空，遍历监听器
         if (listeners != null && !listeners.isEmpty()) {
             for (InvokerListener listener : listeners) {
                 if (listener != null) {
                     try {
+                        // 调用在服务引用的时候进行监听
                         listener.referred(invoker);
                     } catch (Throwable t) {
                         logger.error(t.getMessage(), t);
@@ -85,8 +94,10 @@ public class ListenerInvokerWrapper<T> implements Invoker<T> {
     @Override
     public void destroy() {
         try {
+            // 销毁invoker
             invoker.destroy();
         } finally {
+            // 销毁所有监听的实体域
             if (listeners != null && !listeners.isEmpty()) {
                 for (InvokerListener listener : listeners) {
                     if (listener != null) {

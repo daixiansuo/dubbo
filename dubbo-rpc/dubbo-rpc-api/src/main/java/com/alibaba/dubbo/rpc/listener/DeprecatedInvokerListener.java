@@ -25,6 +25,8 @@ import com.alibaba.dubbo.rpc.RpcException;
 
 /**
  * DeprecatedProtocolFilter
+ * <p>
+ * 该类是当调用废弃的服务时候打印错误日志。
  */
 @Activate(Constants.DEPRECATED_KEY)
 public class DeprecatedInvokerListener extends InvokerListenerAdapter {
@@ -33,6 +35,7 @@ public class DeprecatedInvokerListener extends InvokerListenerAdapter {
 
     @Override
     public void referred(Invoker<?> invoker) throws RpcException {
+        // 当该引用的服务被废弃时，打印错误日志
         if (invoker.getUrl().getParameter(Constants.DEPRECATED_KEY, false)) {
             LOGGER.error("The service " + invoker.getInterface().getName() + " is DEPRECATED! Declare from " + invoker.getUrl());
         }

@@ -31,8 +31,14 @@ public class ListenerExporterWrapper<T> implements Exporter<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(ListenerExporterWrapper.class);
 
+    /**
+     * 服务暴露者
+     */
     private final Exporter<T> exporter;
 
+    /**
+     * 服务暴露监听器集合
+     */
     private final List<ExporterListener> listeners;
 
     public ListenerExporterWrapper(Exporter<T> exporter, List<ExporterListener> listeners) {
@@ -43,9 +49,11 @@ public class ListenerExporterWrapper<T> implements Exporter<T> {
         this.listeners = listeners;
         if (listeners != null && !listeners.isEmpty()) {
             RuntimeException exception = null;
+            // 遍历服务暴露监听集合
             for (ExporterListener listener : listeners) {
                 if (listener != null) {
                     try {
+                        // 暴露服务监听
                         listener.exported(this);
                     } catch (RuntimeException t) {
                         logger.error(t.getMessage(), t);
