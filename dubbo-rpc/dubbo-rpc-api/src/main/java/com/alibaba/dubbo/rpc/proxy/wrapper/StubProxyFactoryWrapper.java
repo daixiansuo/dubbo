@@ -37,13 +37,21 @@ import java.lang.reflect.Constructor;
 
 /**
  * StubProxyFactoryWrapper
+ * <p>
+ * 该类实现了本地存根的逻辑，关于本地存根的概念和使用在官方文档中都有详细说明。
  */
 public class StubProxyFactoryWrapper implements ProxyFactory {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StubProxyFactoryWrapper.class);
 
+    /**
+     * 代理工厂
+     */
     private final ProxyFactory proxyFactory;
 
+    /**
+     * 协议
+     */
     private Protocol protocol;
 
     public StubProxyFactoryWrapper(ProxyFactory proxyFactory) {
@@ -59,15 +67,27 @@ public class StubProxyFactoryWrapper implements ProxyFactory {
         return proxyFactory.getProxy(invoker, generic);
     }
 
+    /**
+     * 在该方法中先根据配置生成加载stub服务类，然后通过构造方法将代理的对象进行包装，最后暴露该服务，然后返回代理类对象。
+     *
+     * @param invoker 实体域
+     * @param <T>     泛型
+     * @return 代理对象
+     * @throws RpcException e
+     */
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public <T> T getProxy(Invoker<T> invoker) throws RpcException {
+        // 获得代理对象
         T proxy = proxyFactory.getProxy(invoker);
+        // 如果不是返回服务调用
         if (GenericService.class != invoker.getInterface()) {
+            // 获得 stub 的配置
             String stub = invoker.getUrl().getParameter(Constants.STUB_KEY, invoker.getUrl().getParameter(Constants.LOCAL_KEY));
             if (ConfigUtils.isNotEmpty(stub)) {
                 Class<?> serviceType = invoker.getInterface();
                 if (ConfigUtils.isDefault(stub)) {
+                    // 根据 local 和 stub 来生成 stub
                     if (invoker.getUrl().hasParameter(Constants.STUB_KEY)) {
                         stub = serviceType.getName() + "Stub";
                     } else {
@@ -75,12 +95,15 @@ public class StubProxyFactoryWrapper implements ProxyFactory {
                     }
                 }
                 try {
+                    // 生成 stub 类
                     Class<?> stubClass = ReflectUtils.forName(stub);
                     if (!serviceType.isAssignableFrom(stubClass)) {
                         throw new IllegalStateException("The stub implementation class " + stubClass.getName() + " not implement interface " + serviceType.getName());
                     }
                     try {
+                        // 获得构造方法，该构造方法必须是带有代理的对象的参数
                         Constructor<?> constructor = ReflectUtils.findConstructor(stubClass, serviceType);
+                        // 使用指定的初始化参数 创建和初始化构造函数声明类的新实例
                         proxy = (T) constructor.newInstance(new Object[]{proxy});
                         //export stub service
                         URL url = invoker.getUrl();
@@ -88,6 +111,7 @@ public class StubProxyFactoryWrapper implements ProxyFactory {
                             url = url.addParameter(Constants.STUB_EVENT_METHODS_KEY, StringUtils.join(Wrapper.getWrapper(proxy.getClass()).getDeclaredMethodNames(), ","));
                             url = url.addParameter(Constants.IS_SERVER_KEY, Boolean.FALSE.toString());
                             try {
+                                // 暴露 stub 服务
                                 export(proxy, (Class) invoker.getInterface(), url);
                             } catch (Exception e) {
                                 LOGGER.error("export a stub service error.", e);

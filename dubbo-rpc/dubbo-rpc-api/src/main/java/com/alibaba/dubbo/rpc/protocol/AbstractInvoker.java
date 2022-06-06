@@ -49,14 +49,29 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
+    /**
+     * 服务类型
+     */
     private final Class<T> type;
 
+    /**
+     * url 对象
+     */
     private final URL url;
 
+    /**
+     * 附加值集合
+     */
     private final Map<String, String> attachment;
 
+    /**
+     * 是否可用
+     */
     private volatile boolean available = true;
 
+    /**
+     * 是否销毁
+     */
     private AtomicBoolean destroyed = new AtomicBoolean(false);
 
     public AbstractInvoker(Class<T> type, URL url) {
@@ -77,6 +92,13 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
         this.attachment = attachment == null ? null : Collections.unmodifiableMap(attachment);
     }
 
+    /**
+     * 根据 keys 数组，从url中获取对应参数，创建并返回新的附加值集合
+     *
+     * @param url  url
+     * @param keys key数组
+     * @return 附加值集合
+     */
     private static Map<String, String> convertAttachment(URL url, String[] keys) {
         if (keys == null || keys.length == 0) {
             return null;
@@ -130,16 +152,22 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
     @Override
     public Result invoke(Invocation inv) throws RpcException {
         // if invoker is destroyed due to address refresh from registry, let's allow the current invoke to proceed
+        // 如果调用者由于注册表的地址刷新而被破坏，让我们允许当前调用继续
         if (destroyed.get()) {
             logger.warn("Invoker for service " + this + " on consumer " + NetUtils.getLocalHost() + " is destroyed, "
                     + ", dubbo version is " + Version.getVersion() + ", this invoker should not be used any longer");
         }
 
+        // 会话域类型转换
         RpcInvocation invocation = (RpcInvocation) inv;
+        // 设置 实体域
         invocation.setInvoker(this);
+        // 附加值不为空 添加到会话域
         if (attachment != null && attachment.size() > 0) {
             invocation.addAttachmentsIfAbsent(attachment);
         }
+
+        // 如果 上下文的附加值不为空，则放入 会话域。
         Map<String, String> contextAttachments = RpcContext.getContext().getAttachments();
         if (contextAttachments != null && contextAttachments.size() != 0) {
             /**
@@ -150,17 +178,24 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
              */
             invocation.addAttachments(contextAttachments);
         }
+
+        // 如果开启的是异步调用，则把该设置也放入附加值
         if (getUrl().getMethodParameter(invocation.getMethodName(), Constants.ASYNC_KEY, false)) {
             invocation.setAttachment(Constants.ASYNC_KEY, Boolean.TRUE.toString());
         }
+
+        // 加入编号
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
 
+        // 获取序列化ID
         Byte serializationId = CodecSupport.getIDByName(getUrl().getParameter(SERIALIZATION_KEY, DEFAULT_REMOTING_SERIALIZATION));
+        // 不为空，则放入属性集合
         if (serializationId != null) {
             invocation.put(SERIALIZATION_ID_KEY, serializationId);
         }
 
         try {
+            // 执行调用链
             return doInvoke(invocation);
         } catch (InvocationTargetException e) { // biz exception
             Throwable te = e.getTargetException();

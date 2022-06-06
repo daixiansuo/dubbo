@@ -38,12 +38,15 @@ public class JdkProxyFactory extends AbstractProxyFactory {
 
     @Override
     public <T> Invoker<T> getInvoker(T proxy, Class<T> type, URL url) {
+        // 创建AbstractProxyInvoker对象
         return new AbstractProxyInvoker<T>(proxy, type, url) {
             @Override
             protected Object doInvoke(T proxy, String methodName,
                                       Class<?>[] parameterTypes,
                                       Object[] arguments) throws Throwable {
+                // 反射获得方法
                 Method method = proxy.getClass().getMethod(methodName, parameterTypes);
+                // 执行方法
                 return method.invoke(proxy, arguments);
             }
         };
