@@ -31,10 +31,12 @@ import java.util.List;
  * @see com.alibaba.dubbo.rpc.cluster.Cluster#join(Directory)
  * @see com.alibaba.dubbo.rpc.cluster.Directory#list(Invocation)
  */
-public interface Router extends Comparable<Router>{
+public interface Router extends Comparable<Router> {
 
     /**
      * get the router url.
+     * <p>
+     * 获得路由URL
      *
      * @return url
      */
@@ -42,6 +44,8 @@ public interface Router extends Comparable<Router>{
 
     /**
      * route.
+     * <p>
+     * 路由过滤，筛选处域规则匹配的 invoker 集合
      *
      * @param invokers
      * @param url        refer url
@@ -53,6 +57,8 @@ public interface Router extends Comparable<Router>{
 
     /**
      * Router's priority, used to sort routers.
+     * <p>
+     * 路由器的优先级，用于对路由器进行排序。
      *
      * @return router's priority
      */

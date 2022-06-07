@@ -23,6 +23,9 @@ import com.alibaba.dubbo.rpc.cluster.Directory;
 
 /**
  * {@link ForkingClusterInvoker}
+ * <p>
+ * 同时调用多个相同的服务，只要其中一个返回，则立即返回结果。
+ * 用户可以配置 forks:最大并行调用数”参数来确定最大并行调用的服务数量。通常使用在对接口 实时性要求极高的调用上，但也会浪费更多的资源
  *
  */
 public class ForkingCluster implements Cluster {

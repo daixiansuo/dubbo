@@ -24,6 +24,9 @@ import com.alibaba.dubbo.rpc.cluster.Directory;
 /**
  * {@link FailfastClusterInvoker}
  *
+ * 快速失败，当请求失败后，快速返回异常结果，不做任何重试。该容错机制会对请求 做负载均衡，
+ * 通常使用在非幕等接口的调用上。该机制受网络抖动的影响较大
+ *
  */
 public class FailfastCluster implements Cluster {
 

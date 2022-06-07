@@ -27,6 +27,9 @@ import java.util.List;
  * Directory. (SPI, Prototype, ThreadSafe)
  * <p>
  * <a href="http://en.wikipedia.org/wiki/Directory_service">Directory Service</a>
+ * <p>
+ * 该接口是目录接口，Directory 代表了多个 Invoker，并且它的值会随着注册中心的服务变更推送而变化 。
+ * 一个服务类型对应一个Directory。定义的两个方法也比较好理解。
  *
  * @see com.alibaba.dubbo.rpc.cluster.Cluster#join(Directory)
  */
@@ -34,6 +37,7 @@ public interface Directory<T> extends Node {
 
     /**
      * get service type.
+     * 获得服务类型
      *
      * @return service type.
      */
@@ -41,6 +45,8 @@ public interface Directory<T> extends Node {
 
     /**
      * list invokers.
+     * <p>
+     * 获得所有服务 invoker 集合
      *
      * @return invokers
      */

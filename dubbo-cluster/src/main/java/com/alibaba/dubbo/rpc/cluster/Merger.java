@@ -18,6 +18,11 @@ package com.alibaba.dubbo.rpc.cluster;
 
 import com.alibaba.dubbo.common.extension.SPI;
 
+/**
+ * 该接口是分组聚合，将某对象数组合并为一个对象。
+ *
+ * @param <T> 泛型对象
+ */
 @SPI
 public interface Merger<T> {
 

@@ -24,6 +24,8 @@ import com.alibaba.dubbo.rpc.cluster.Directory;
 /**
  * {@link FailbackClusterInvoker}
  *
+ * 请求失败后，会自动记录在失败队列中，并由一个定时线程池定时重试，适用于一些 异步或最终一致性的请求。请求会做负载均衡
+ *
  */
 public class FailbackCluster implements Cluster {
 

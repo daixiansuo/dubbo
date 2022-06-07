@@ -23,7 +23,9 @@ import com.alibaba.dubbo.rpc.cluster.Directory;
 
 /**
  * {@link FailoverClusterInvoker}
- *
+ * <p>
+ * 当调用失败时，会重试其他服务器。用户可以通过retries="2" 设置重试次数。
+ * 这是Dubbo的默认容错机制，会对请求做负载均衡。通常使用在读操作或幕等的写操作上，但重试会导致接口的延退增大，在下游机器负载已经达到极限时，重试容易加重下游 服务的负载
  */
 public class FailoverCluster implements Cluster {
 

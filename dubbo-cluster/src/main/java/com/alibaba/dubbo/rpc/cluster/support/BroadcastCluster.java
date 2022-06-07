@@ -24,6 +24,8 @@ import com.alibaba.dubbo.rpc.cluster.Directory;
 /**
  * BroadcastCluster
  *
+ * 广播调用所有可用的服务，任意一个节点报错则报错。由于是广播，因此请求不需要 做负载均衡。通常用于服务状态更新后的广播
+ *
  */
 public class BroadcastCluster implements Cluster {
 

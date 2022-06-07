@@ -23,7 +23,8 @@ import com.alibaba.dubbo.rpc.cluster.Directory;
 
 /**
  * {@link FailsafeClusterInvoker}
- *
+ *  当出现异常时，直接忽略异常。会对请求做负载均衡。通常使用在“佛系”调用场景， 即不关心调用是否成功，
+ *  并且不想抛异常影响外层调用，如某些不重要的日志同步，j 即使出现异常也无所谓
  */
 public class FailsafeCluster implements Cluster {
 

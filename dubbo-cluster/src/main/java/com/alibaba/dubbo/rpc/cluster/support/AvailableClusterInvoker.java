@@ -27,7 +27,7 @@ import java.util.List;
 
 /**
  * AvailableCluster
- *
+ * 最简单的方式，请求不会做负载均衡，遍历所有服务列表，找到第一个可用的节点， 直接请求并返回结果。如果没有可用的节点，则直接抛出异。
  */
 public class AvailableClusterInvoker<T> extends AbstractClusterInvoker<T> {
 

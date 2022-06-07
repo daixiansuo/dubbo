@@ -31,9 +31,13 @@ import java.util.List;
 /**
  * When invoke fails, log the error message and ignore this error by returning an empty RpcResult.
  * Usually used to write audit logs and other operations
+ * <p>
+ * 当调用失败时，记录错误消息并通过返回空 RpcResult 忽略此错误。通常用于写审计日志等操作
  *
  * <a href="http://en.wikipedia.org/wiki/Fail-safe">Fail-safe</a>
- *
+ * <p>
+ * 当出现异常时，直接忽略异常。会对请求做负载均衡。通常使用在“佛系”调用场景， 即不关心调用是否成功，
+ * 并且不想抛异常影响外层调用，如某些不重要的日志同步，j 即使出现异常也无所谓
  */
 public class FailsafeClusterInvoker<T> extends AbstractClusterInvoker<T> {
     private static final Logger logger = LoggerFactory.getLogger(FailsafeClusterInvoker.class);
@@ -45,10 +49,14 @@ public class FailsafeClusterInvoker<T> extends AbstractClusterInvoker<T> {
     @Override
     public Result doInvoke(Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
         try {
+            // 检查invokers是否为空
             checkInvokers(invokers, invocation);
+            // 负载策略选择
             Invoker<T> invoker = select(loadbalance, invocation, invokers, null);
+            // 调用执行
             return invoker.invoke(invocation);
         } catch (Throwable e) {
+            // 如果失败打印异常，返回一个空结果
             logger.error("Failsafe ignore exception: " + e.getMessage(), e);
             return new RpcResult(); // ignore
         }
