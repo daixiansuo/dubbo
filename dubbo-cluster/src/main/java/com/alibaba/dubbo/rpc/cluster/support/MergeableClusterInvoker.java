@@ -50,7 +50,15 @@ import java.util.concurrent.TimeUnit;
 public class MergeableClusterInvoker<T> implements Invoker<T> {
 
     private static final Logger log = LoggerFactory.getLogger(MergeableClusterInvoker.class);
+
+    /**
+     * 目录
+     */
     private final Directory<T> directory;
+
+    /**
+     * 线程池
+     */
     private ExecutorService executor = Executors.newCachedThreadPool(new NamedThreadFactory("mergeable-cluster-executor", true));
 
     public MergeableClusterInvoker(Directory<T> directory) {
@@ -60,6 +68,8 @@ public class MergeableClusterInvoker<T> implements Invoker<T> {
     @Override
     @SuppressWarnings("rawtypes")
     public Result invoke(final Invocation invocation) throws RpcException {
+
+        // 获取 invoker 列表
         List<Invoker<T>> invokers = directory.list(invocation);
 
         String merger = getUrl().getMethodParameter(invocation.getMethodName(), Constants.MERGER_KEY);

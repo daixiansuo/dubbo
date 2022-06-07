@@ -43,12 +43,24 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
     // logger
     private static final Logger logger = LoggerFactory.getLogger(AbstractDirectory.class);
 
+    /**
+     * url 对象
+     */
     private final URL url;
 
+    /**
+     * 是否销毁
+     */
     private volatile boolean destroyed = false;
 
+    /**
+     * 消费者端 url
+     */
     private volatile URL consumerUrl;
 
+    /**
+     * 路由集合
+     */
     private volatile List<Router> routers;
 
     public AbstractDirectory(URL url) {
@@ -69,15 +81,27 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
 
     @Override
     public List<Invoker<T>> list(Invocation invocation) throws RpcException {
+
+        // 如果销毁，则抛出异常
         if (destroyed) {
             throw new RpcException("Directory already destroyed .url: " + getUrl());
         }
+
+        // 调用抽象方法，具体实现由子类去获取 invoker 列表
         List<Invoker<T>> invokers = doList(invocation);
+        // 路由集合
         List<Router> localRouters = this.routers; // local reference
+        // 路由集合不为空，遍历路由集合
         if (localRouters != null && !localRouters.isEmpty()) {
             for (Router router : localRouters) {
                 try {
+                    /**
+                     * runtime=false 是否在每次调用时执行路由规则，否则只在提供者地址列表变更时预先执行并缓存结果，
+                     * 调用时直接从缓存中获取路由结果。如果用了参数路由，必须设为 true，需要注意设置会影响调用的性能，
+                     * 可不填，缺省为 false。
+                     */
                     if (router.getUrl() == null || router.getUrl().getParameter(Constants.RUNTIME_KEY, false)) {
+                        // 根据路由规则 选择符合规则的 invoker 集合
                         invokers = router.route(invokers, getConsumerUrl(), invocation);
                     }
                 } catch (Throwable t) {
@@ -98,17 +122,21 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
     }
 
     protected void setRouters(List<Router> routers) {
-        // copy list
+        // 复制路由集合
         routers = routers == null ? new ArrayList<Router>() : new ArrayList<Router>(routers);
         // append url router
+        // 获取路由配置
         String routerkey = url.getParameter(Constants.ROUTER_KEY);
+        // 不为空，则根据 routerkey 获取路由工厂的扩展实现
         if (routerkey != null && routerkey.length() > 0) {
             RouterFactory routerFactory = ExtensionLoader.getExtensionLoader(RouterFactory.class).getExtension(routerkey);
+            // 加入路由集合
             routers.add(routerFactory.getRouter(url));
         }
         // append mock invoker selector
         routers.add(new MockInvokersSelector());
         routers.add(new TagRouter());
+        // 排序
         Collections.sort(routers);
         this.routers = routers;
     }

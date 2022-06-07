@@ -21,6 +21,9 @@ import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.dubbo.rpc.cluster.Cluster;
 import com.alibaba.dubbo.rpc.cluster.Directory;
 
+/**
+ * Mergeable 可以自动把多个节点请求得到的结果进行合并
+ */
 public class MergeableCluster implements Cluster {
 
     public static final String NAME = "mergeable";
