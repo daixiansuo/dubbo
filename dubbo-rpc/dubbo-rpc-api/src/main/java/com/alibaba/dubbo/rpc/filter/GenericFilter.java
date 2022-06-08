@@ -47,6 +47,8 @@ import java.lang.reflect.Method;
 
 /**
  * GenericInvokerFilter.
+ * <p>
+ * 用于服务提供者端，实现泛化调用，实现序列化的检查和处理
  */
 @Activate(group = Constants.PROVIDER, order = -20000)
 public class GenericFilter implements Filter {

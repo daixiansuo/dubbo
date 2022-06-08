@@ -32,6 +32,9 @@ import java.util.Map;
 
 /**
  * 服务提供方 初始化 RpcContext 对象
+ * <p>
+ * 为服务提供者把一些上下文信息设置到当前线程 的 RpcContext 对象中，包括 invocation、local
+ * <p>
  * ContextInvokerFilter
  */
 @Activate(group = Constants.PROVIDER, order = -10000)

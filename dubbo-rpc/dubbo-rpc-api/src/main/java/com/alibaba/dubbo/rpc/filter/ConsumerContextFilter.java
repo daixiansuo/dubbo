@@ -30,6 +30,11 @@ import com.alibaba.dubbo.rpc.RpcResult;
 
 /**
  * 该过滤器做的是在当前的RpcContext中记录本地调用的一次状态信息。
+ * <p>
+ * 为消费者把一些上下文信息设置到当前线程 的 RpcContext 对象中，包括 invocation、local
+ * <p>
+ * host> remote host 等
+ * <p>
  * ConsumerContextInvokerFilter
  */
 @Activate(group = Constants.CONSUMER, order = -10000)

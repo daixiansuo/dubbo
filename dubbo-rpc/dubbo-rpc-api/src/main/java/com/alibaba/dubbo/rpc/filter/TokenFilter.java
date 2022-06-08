@@ -30,6 +30,8 @@ import java.util.Map;
 
 /**
  * TokenInvokerFilter
+ *
+ * 服务提供者下发令牌给消费者，通常用于防止消费者绕过注册中心直接调用服务提供者
  */
 @Activate(group = Constants.PROVIDER, value = Constants.TOKEN_KEY)
 public class TokenFilter implements Filter {

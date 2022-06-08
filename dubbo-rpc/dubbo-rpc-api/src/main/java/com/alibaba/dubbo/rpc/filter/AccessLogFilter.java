@@ -60,8 +60,12 @@ import java.util.concurrent.TimeUnit;
  * &lt;/logger&gt;
  * </pre></code>
  * <p>
+ * <p>
  * 该过滤器是对记录日志的过滤器，它所做的工作就是把引用服务或者暴露服务的调用链信息写入到文件中。
  * 日志消息先被放入日志集合，然后加入到日志队列，然后被放入到写入文件到任务中，最后进入文件。
+ * <p>
+ * <p>
+ * 打印每一次请求的访问日志。如果需要访问的日志只出现在指定的appender中，则可以在log的配置文件中配置additivity
  */
 @Activate(group = Constants.PROVIDER, value = Constants.ACCESS_LOG_KEY)
 public class AccessLogFilter implements Filter {

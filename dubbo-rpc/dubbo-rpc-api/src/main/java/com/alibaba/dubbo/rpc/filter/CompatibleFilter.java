@@ -33,6 +33,9 @@ import java.lang.reflect.Type;
 
 /**
  * CompatibleFilter
+ * <p>
+ * 用于使返回值与调用程序的对象版本兼容，默认不启用。
+ * 如果启用，则会把JSON或 fastjson 类型的返回值转换为Map类型;如果返回类型 和本地接口中定义的不同，则会做POJO的转换
  */
 public class CompatibleFilter implements Filter {
 

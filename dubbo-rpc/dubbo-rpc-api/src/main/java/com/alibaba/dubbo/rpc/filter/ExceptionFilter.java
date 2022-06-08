@@ -35,7 +35,8 @@ import java.lang.reflect.Method;
 
 /**
  * 该过滤器是作用是对异常的处理。
- * 服务提供方 执行。
+ * <p>
+ * 用于统一的异常处理，防止出现序列化失败
  * <p>
  * ExceptionInvokerFilter
  * <p>

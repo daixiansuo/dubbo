@@ -49,31 +49,40 @@ public class ProtocolFilterWrapper implements Protocol {
      * @return Invoker
      */
     private static <T> Invoker<T> buildInvokerChain(final Invoker<T> invoker, String key, String group) {
+
+        // TODO：保存引用，后续用于把真正的调用者保存到过滤器链的最后
         Invoker<T> last = invoker;
         // 获得 过滤器的所有扩展实现类 实例集合
         List<Filter> filters = ExtensionLoader.getExtensionLoader(Filter.class).getActivateExtension(invoker.getUrl(), key, group);
+
         // 过滤器不为空，倒序遍历所有过滤器
         if (!filters.isEmpty()) {
-            // 从最后一个过滤器开始循环，创建一个带有过滤器链的 invoker 对象
+
+            // 对过滤器做倒排遍历，即从尾到头
             for (int i = filters.size() - 1; i >= 0; i--) {
 
                 final Filter filter = filters.get(i);
-                // 会把真实的 Invoker（服务对象 ref）放到过滤器的末尾
+                // TODO：注意这段逻辑，把 last 节点变成 next 节点，并放到 Filter 链的 next 中。
                 final Invoker<T> next = last;
+
                 // 为每个 filter 生成一个 invoker，依次串起来
                 last = new Invoker<T>() {
 
+
                     /**
-                     * 关键在这里，调用下一个 filter 对应的 invoker，把每一个过滤器串起来
-                     * @param invocation 会话域
-                     * @return Result
-                     * @throws RpcException e
+                     TODO：为什么要倒排遍历呢 ？
+
+                     因为是通过从里到外构造匿名类的方式构造Invoker的，所以只有倒排，最外层的Invoker才能是第一个过滤器。
+
+                     我们来看一个例子:
+                     假设有过滤器A、B、C 和 Invoker，会按照C、B、A倒序遍历，过滤器链构建顺序为: C—Invoker, B—C—Invoker, A—B—C—Invoker。
+                     最终调用时的顺序就会变为A是第一个过 滤器。
                      */
+
+
                     @Override
                     public Result invoke(Invocation invocation) throws RpcException {
-                        // 每次调用都会传递给下一个过滤器
-                        // 最后一个过滤器的invoke调用的是通过Protocol得到的Invoker
-                        // 第一个过滤器的invoke调用的是第二个过滤器
+                        // TODO：设置过滤器链的下一个节点，不断循环形成过滤器链。
                         return filter.invoke(next, invocation);
                     }
 
