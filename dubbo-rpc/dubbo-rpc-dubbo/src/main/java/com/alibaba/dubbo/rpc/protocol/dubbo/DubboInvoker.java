@@ -42,14 +42,29 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class DubboInvoker<T> extends AbstractInvoker<T> {
 
+    /**
+     * 信息交换客户端数组
+     */
     private final ExchangeClient[] clients;
 
+    /**
+     * 客户端数组位置
+     */
     private final AtomicPositiveInteger index = new AtomicPositiveInteger();
 
+    /**
+     * 版本号
+     */
     private final String version;
 
+    /**
+     * 销毁锁
+     */
     private final ReentrantLock destroyLock = new ReentrantLock();
 
+    /**
+     * invoker集合
+     */
     private final Set<Invoker<?>> invokers;
 
     public DubboInvoker(Class<T> serviceType, URL url, ExchangeClient[] clients) {
@@ -75,6 +90,7 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
         if (clients.length == 1) {
             currentClient = clients[0];
         } else {
+            // 取模轮询，从数组中
             currentClient = clients[index.getAndIncrement() % clients.length];
         }
         try {
