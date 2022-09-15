@@ -14,20 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.alibaba.dubbo.demo.provider;
+package com.alibaba.dubbo.demo;
 
-import com.alibaba.dubbo.demo.DemoService;
-import com.alibaba.dubbo.rpc.RpcContext;
+public interface MoneyService {
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
-public class DemoServiceImpl implements DemoService {
-
-    @Override
-    public String sayHello(String name) {
-        System.out.println("l am demo");
-        return "demo";
-    }
+    String money(String money);
 
 }

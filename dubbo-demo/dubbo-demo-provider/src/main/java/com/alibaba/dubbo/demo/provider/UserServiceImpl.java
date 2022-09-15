@@ -16,18 +16,14 @@
  */
 package com.alibaba.dubbo.demo.provider;
 
-import com.alibaba.dubbo.demo.DemoService;
-import com.alibaba.dubbo.rpc.RpcContext;
+import com.alibaba.dubbo.demo.UserService;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+public class UserServiceImpl implements UserService {
 
-public class DemoServiceImpl implements DemoService {
 
     @Override
-    public String sayHello(String name) {
-        System.out.println("l am demo");
-        return "demo";
+    public String info(String name) {
+        System.out.println("l am user");
+        return "user";
     }
-
 }

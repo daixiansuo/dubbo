@@ -16,18 +16,14 @@
  */
 package com.alibaba.dubbo.demo.provider;
 
-import com.alibaba.dubbo.demo.DemoService;
-import com.alibaba.dubbo.rpc.RpcContext;
+import com.alibaba.dubbo.demo.MoneyService;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+public class MoneyServiceImpl implements MoneyService {
 
-public class DemoServiceImpl implements DemoService {
 
     @Override
-    public String sayHello(String name) {
-        System.out.println("l am demo");
-        return "demo";
+    public String money(String money) {
+        System.out.println("l am money");
+        return "money";
     }
-
 }
