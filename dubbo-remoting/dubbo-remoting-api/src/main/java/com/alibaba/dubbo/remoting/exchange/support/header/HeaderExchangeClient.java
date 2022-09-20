@@ -159,6 +159,7 @@ public class HeaderExchangeClient implements ExchangeClient {
     @Override
     public void close(int timeout) {
         // Mark the client into the closure process
+        // 将客户端标记为关闭过程
         startClose();
         doClose();
         channel.close(timeout);

@@ -147,7 +147,7 @@ public class HeaderExchangeServer implements ExchangeServer {
                 // 发送 READONLY_EVENT 事件给 所有连接该服务器的客户端，表示 Server 不可读了
                 sendChannelReadOnlyEvent();
             }
-            // 当服务器还在运行，并且没有超时，睡眠，也就是等待timeout左右时间在进行关闭
+            // 如果发现有正在进行中的任务，就 Thread.sleep 10 毫秒，在超时时间内（默认10秒）等待任务执行完毕
             while (HeaderExchangeServer.this.isRunning()
                     && System.currentTimeMillis() - start < max) {
                 try {
