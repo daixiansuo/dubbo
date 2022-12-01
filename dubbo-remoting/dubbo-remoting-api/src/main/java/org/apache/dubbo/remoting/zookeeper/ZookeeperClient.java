@@ -22,10 +22,26 @@ import org.apache.dubbo.common.config.configcenter.ConfigItem;
 import java.util.List;
 import java.util.concurrent.Executor;
 
+/**
+ * Common abstraction of Zookeeper client.
+ */
 public interface ZookeeperClient {
 
-    void create(String path, boolean ephemeral);
+    /**
+     * Create ZNode in Zookeeper.
+     *
+     * @param path path to ZNode
+     * @param ephemeral specify create mode of ZNode creation. true - EPHEMERAL, false - PERSISTENT.
+     * @param faultTolerant specify fault tolerance of ZNode creation.
+     *                       true - ignore exception and recreate if is ephemeral, false - throw exception.
+     */
+    void create(String path, boolean ephemeral, boolean faultTolerant);
 
+    /**
+     * Delete ZNode.
+     *
+     * @param path path to ZNode
+     */
     void delete(String path);
 
     List<String> getChildren(String path);
@@ -33,18 +49,28 @@ public interface ZookeeperClient {
     List<String> addChildListener(String path, ChildListener listener);
 
     /**
-     * @param path:    directory. All child of path will be listened.
-     * @param listener
+     * Attach data listener to current Zookeeper client.
+     *
+     * @param path    directory. All children of path will be listened.
+     * @param listener The data listener object.
      */
     void addDataListener(String path, DataListener listener);
 
     /**
-     * @param path:    directory. All child of path will be listened.
-     * @param listener
-     * @param executor another thread
+     * Attach data listener to current Zookeeper client. The listener will be executed using the given executor.
+     *
+     * @param path    directory. All children of path will be listened.
+     * @param listener The data listener object.
+     * @param executor the executor that will execute the listener.
      */
     void addDataListener(String path, DataListener listener, Executor executor);
 
+    /**
+     * Detach data listener.
+     *
+     * @param path    directory. All listener of children of the path will be detached.
+     * @param listener The data listener object.
+     */
     void removeDataListener(String path, DataListener listener);
 
     void removeChildListener(String path, ChildListener listener);
@@ -53,16 +79,45 @@ public interface ZookeeperClient {
 
     void removeStateListener(StateListener listener);
 
+    /**
+     * Check the Zookeeper client whether connected to server or not.
+     *
+     * @return true if connected
+     */
     boolean isConnected();
 
+    /**
+     * Close connection to Zookeeper server (cluster).
+     */
     void close();
 
     URL getUrl();
 
-    void create(String path, String content, boolean ephemeral);
+    /**
+     * Create or update ZNode in Zookeeper with content specified.
+     *
+     * @param path path to ZNode
+     * @param content the content of ZNode
+     * @param ephemeral specify create mode of ZNode creation. true - EPHEMERAL, false - PERSISTENT.
+     */
+    void createOrUpdate(String path, String content, boolean ephemeral);
 
-    void createOrUpdate(String path, String content, boolean ephemeral, int ticket);
+    /**
+     * CAS version to Create or update ZNode in Zookeeper with content specified.
+     *
+     * @param path path to ZNode
+     * @param content the content of ZNode
+     * @param ephemeral specify create mode of ZNode creation. true - EPHEMERAL, false - PERSISTENT.
+     * @param ticket origin content version, if current version is not the specified version, throw exception
+     */
+    void createOrUpdate(String path, String content, boolean ephemeral, Integer ticket);
 
+    /**
+     * Obtain the content of a ZNode.
+     *
+     * @param path path to ZNode
+     * @return content of ZNode
+     */
     String getContent(String path);
 
     ConfigItem getConfigItem(String path);

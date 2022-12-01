@@ -27,13 +27,13 @@ import org.apache.dubbo.config.ServiceConfig;
 import org.apache.dubbo.config.ServiceListener;
 import org.apache.dubbo.config.bootstrap.DubboBootstrap;
 import org.apache.dubbo.config.integration.IntegrationTest;
-import org.apache.dubbo.config.metadata.MetadataServiceDelegation;
 import org.apache.dubbo.metadata.MetadataInfo;
 import org.apache.dubbo.metadata.MetadataService;
 import org.apache.dubbo.registry.ListenerRegistryWrapper;
 import org.apache.dubbo.registry.Registry;
 import org.apache.dubbo.registry.client.ServiceDiscoveryRegistry;
 import org.apache.dubbo.registry.client.ServiceDiscoveryRegistryDirectory;
+import org.apache.dubbo.registry.client.metadata.MetadataServiceDelegation;
 import org.apache.dubbo.registry.client.migration.MigrationInvoker;
 import org.apache.dubbo.registry.support.RegistryManager;
 import org.apache.dubbo.registry.zookeeper.ZookeeperServiceDiscovery;
@@ -62,7 +62,7 @@ import static org.apache.dubbo.rpc.Constants.SCOPE_REMOTE;
  * This abstraction class will implement some methods as base for single registry center.
  */
 @DisabledForJreRange(min = JRE.JAVA_16)
-public class SingleRegistryCenterDubboProtocolIntegrationTest implements IntegrationTest {
+class SingleRegistryCenterDubboProtocolIntegrationTest implements IntegrationTest {
 
     private static final Logger logger = LoggerFactory.getLogger(SingleRegistryCenterDubboProtocolIntegrationTest.class);
     /**

@@ -17,7 +17,7 @@
 package org.apache.dubbo.registry.support;
 
 import org.apache.dubbo.common.URL;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.threadpool.manager.FrameworkExecutorRepository;
 import org.apache.dubbo.common.utils.CollectionUtils;
@@ -40,6 +40,7 @@ import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -60,6 +61,12 @@ import static org.apache.dubbo.common.constants.CommonConstants.ANY_VALUE;
 import static org.apache.dubbo.common.constants.CommonConstants.COMMA_SPLIT_PATTERN;
 import static org.apache.dubbo.common.constants.CommonConstants.FILE_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.REGISTRY_LOCAL_FILE_CACHE_ENABLED;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.REGISTRY_EMPTY_ADDRESS;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.REGISTRY_FAILED_NOTIFY_EVENT;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.REGISTRY_FAILED_DESTROY_UNREGISTER_URL;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.REGISTRY_FAILED_READ_WRITE_CACHE_FILE;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.REGISTRY_FAILED_DELETE_LOCKFILE;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.REGISTRY_UNEXPECTED_EXCEPTION;
 import static org.apache.dubbo.common.constants.RegistryConstants.ACCEPTS_KEY;
 import static org.apache.dubbo.common.constants.RegistryConstants.DEFAULT_CATEGORY;
 import static org.apache.dubbo.common.constants.RegistryConstants.DYNAMIC_KEY;
@@ -70,7 +77,10 @@ import static org.apache.dubbo.registry.Constants.REGISTRY_FILESAVE_SYNC_KEY;
 import static org.apache.dubbo.registry.Constants.USER_HOME;
 
 /**
- * AbstractRegistry. (SPI, Prototype, ThreadSafe)
+ * <p>
+ * Provides a fail-safe registry service backed by cache file. The consumer/provider can still find each other when registry center crashed.
+ * <p>
+ * (SPI, Prototype, ThreadSafe)
  */
 public abstract class AbstractRegistry implements Registry {
 
@@ -84,7 +94,8 @@ public abstract class AbstractRegistry implements Registry {
     private static final long DEFAULT_INTERVAL_SAVE_PROPERTIES = 500L;
 
     // Log output
-    protected final Logger logger = LoggerFactory.getLogger(getClass());
+    protected final ErrorTypeAwareLogger logger = LoggerFactory.getErrorTypeAwareLogger(getClass());
+
     // Local disk cache, where the special key value.registries records the list of registry centers, and the others are the list of notified service providers
     private final Properties properties = new Properties();
     // File cache timing writing
@@ -103,7 +114,9 @@ public abstract class AbstractRegistry implements Registry {
     protected RegistryManager registryManager;
     protected ApplicationModel applicationModel;
 
-    public AbstractRegistry(URL url) {
+    private static final String CAUSE_MULTI_DUBBO_USING_SAME_FILE = "multiple Dubbo instance are using the same file";
+
+    protected AbstractRegistry(URL url) {
         setUrl(url);
         registryManager = url.getOrDefaultApplicationModel().getBeanFactory().getBean(RegistryManager.class);
         localCacheEnabled = url.getParameter(REGISTRY_LOCAL_FILE_CACHE_ENABLED, true);
@@ -112,19 +125,36 @@ public abstract class AbstractRegistry implements Registry {
         if (localCacheEnabled) {
             // Start file save timer
             syncSaveFile = url.getParameter(REGISTRY_FILESAVE_SYNC_KEY, false);
+
             String defaultFilename = System.getProperty(USER_HOME) + DUBBO_REGISTRY + url.getApplication() +
                 "-" + url.getAddress().replaceAll(":", "-") + CACHE;
+
             String filename = url.getParameter(FILE_KEY, defaultFilename);
             File file = null;
+
             if (ConfigUtils.isNotEmpty(filename)) {
                 file = new File(filename);
                 if (!file.exists() && file.getParentFile() != null && !file.getParentFile().exists()) {
                     if (!file.getParentFile().mkdirs()) {
-                        throw new IllegalArgumentException("Invalid registry cache file " + file + ", cause: Failed to create directory " + file.getParentFile() + "!");
+
+                        IllegalArgumentException illegalArgumentException = new IllegalArgumentException(
+                            "Invalid registry cache file " + file + ", cause: Failed to create directory " + file.getParentFile() + "!");
+
+                        if (logger != null) {
+                            // 1-9 failed to read / save registry cache file.
+
+                            logger.error(REGISTRY_FAILED_READ_WRITE_CACHE_FILE, "cache directory inaccessible",
+                                "Try adjusting permission of the directory.",
+                                "failed to create directory", illegalArgumentException);
+                        }
+
+                        throw illegalArgumentException;
                     }
                 }
             }
+
             this.file = file;
+
             // When starting the subscription center,
             // we need to read the local cache file for future Registry fault tolerance processing.
             loadProperties();
@@ -191,13 +221,22 @@ public abstract class AbstractRegistry implements Registry {
             if (!lockfile.exists()) {
                 lockfile.createNewFile();
             }
+
             try (RandomAccessFile raf = new RandomAccessFile(lockfile, "rw");
                  FileChannel channel = raf.getChannel()) {
                 FileLock lock = channel.tryLock();
                 if (lock == null) {
-                    throw new IOException("Can not lock the registry cache file " + file.getAbsolutePath() + ", " +
+
+                    IOException ioException = new IOException("Can not lock the registry cache file " + file.getAbsolutePath() + ", " +
                         "ignore and retry later, maybe multi java process use the file, please config: dubbo.registry.file=xxx.properties");
+
+                    // 1-9 failed to read / save registry cache file.
+                    logger.warn(REGISTRY_FAILED_READ_WRITE_CACHE_FILE, CAUSE_MULTI_DUBBO_USING_SAME_FILE, "",
+                        "Adjust dubbo.registry.file.", ioException);
+
+                    throw ioException;
                 }
+
                 // Save
                 try {
                     if (!file.exists()) {
@@ -228,29 +267,39 @@ public abstract class AbstractRegistry implements Registry {
             }
         } catch (Throwable e) {
             savePropertiesRetryTimes.incrementAndGet();
+
             if (savePropertiesRetryTimes.get() >= MAX_RETRY_TIMES_SAVE_PROPERTIES) {
                 if (e instanceof OverlappingFileLockException) {
                     // fix #9341, ignore OverlappingFileLockException
                     logger.info("Failed to save registry cache file for file overlapping lock exception, file name " + file.getName());
                 } else {
-                    logger.warn("Failed to save registry cache file after retrying " + MAX_RETRY_TIMES_SAVE_PROPERTIES + " times, cause: " + e.getMessage(), e);
+                    // 1-9 failed to read / save registry cache file.
+                    logger.warn(REGISTRY_FAILED_READ_WRITE_CACHE_FILE, CAUSE_MULTI_DUBBO_USING_SAME_FILE, "",
+                        "Failed to save registry cache file after retrying " + MAX_RETRY_TIMES_SAVE_PROPERTIES + " times, cause: " + e.getMessage(), e);
                 }
+
                 savePropertiesRetryTimes.set(0);
                 return;
             }
+
             if (version < lastCacheChanged.get()) {
                 savePropertiesRetryTimes.set(0);
                 return;
             } else {
                 registryCacheExecutor.schedule(() -> doSaveProperties(lastCacheChanged.incrementAndGet()), DEFAULT_INTERVAL_SAVE_PROPERTIES, TimeUnit.MILLISECONDS);
             }
+
             if (!(e instanceof OverlappingFileLockException)) {
-                logger.warn("Failed to save registry cache file, will retry, cause: " + e.getMessage(), e);
+                logger.warn(REGISTRY_FAILED_READ_WRITE_CACHE_FILE, CAUSE_MULTI_DUBBO_USING_SAME_FILE,
+                    "However, the retrying count limit is not exceeded. Dubbo will still try.",
+                    "Failed to save registry cache file, will retry, cause: " + e.getMessage(), e);
             }
         } finally {
             if (lockfile != null) {
                 if (!lockfile.delete()) {
-                    logger.warn(String.format("Failed to delete lock file [%s]", lockfile.getName()));
+                    // 1-10 Failed to delete lock file.
+                    logger.warn(REGISTRY_FAILED_DELETE_LOCKFILE, "", "",
+                        String.format("Failed to delete lock file [%s]", lockfile.getName()));
                 }
             }
         }
@@ -266,13 +315,24 @@ public abstract class AbstractRegistry implements Registry {
                 logger.info("Loaded registry cache file " + file);
             }
         } catch (IOException e) {
-            logger.warn(e.getMessage(), e);
+            // 1-9 failed to read / save registry cache file.
+            logger.warn(REGISTRY_FAILED_READ_WRITE_CACHE_FILE, CAUSE_MULTI_DUBBO_USING_SAME_FILE, "",
+                e.getMessage(), e);
+
         } catch (Throwable e) {
-            logger.warn("Failed to load registry cache file " + file, e);
+            // 1-9 failed to read / save registry cache file.
+            logger.warn(REGISTRY_FAILED_READ_WRITE_CACHE_FILE, CAUSE_MULTI_DUBBO_USING_SAME_FILE, "",
+                "Failed to load registry cache file " + file, e);
         }
     }
 
     public List<URL> getCacheUrls(URL url) {
+        Map<String, List<URL>> categoryNotified = notified.get(url);
+        if (CollectionUtils.isNotEmptyMap(categoryNotified)) {
+            List<URL> urls = categoryNotified.values().stream().flatMap(Collection::stream).collect(Collectors.toList());
+            return urls;
+        }
+
         for (Map.Entry<Object, Object> entry : properties.entrySet()) {
             String key = (String) entry.getKey();
             String value = (String) entry.getValue();
@@ -422,7 +482,9 @@ public abstract class AbstractRegistry implements Registry {
                     try {
                         notify(url, listener, filterEmpty(url, urls));
                     } catch (Throwable t) {
-                        logger.error("Failed to notify registry event, urls: " + urls + ", cause: " + t.getMessage(), t);
+                        // 1-7: Failed to notify registry event.
+                        logger.error(REGISTRY_FAILED_NOTIFY_EVENT, "consumer is offline", "",
+                            "Failed to notify registry event, urls: " + urls + ", cause: " + t.getMessage(), t);
                     }
                 }
             }
@@ -430,7 +492,7 @@ public abstract class AbstractRegistry implements Registry {
     }
 
     /**
-     * Notify changes from the Provider side.
+     * Notify changes from the provider side.
      *
      * @param url      consumer side url
      * @param listener listener
@@ -444,7 +506,8 @@ public abstract class AbstractRegistry implements Registry {
             throw new IllegalArgumentException("notify listener == null");
         }
         if ((CollectionUtils.isEmpty(urls)) && !ANY_VALUE.equals(url.getServiceInterface())) {
-            logger.warn("Ignore empty notify urls for subscribe url " + url);
+            // 1-4 Empty address.
+            logger.warn(REGISTRY_EMPTY_ADDRESS, "", "", "Ignore empty notify urls for subscribe url " + url);
             return;
         }
         if (logger.isInfoEnabled()) {
@@ -468,6 +531,7 @@ public abstract class AbstractRegistry implements Registry {
             List<URL> categoryList = entry.getValue();
             categoryNotified.put(category, categoryList);
             listener.notify(categoryList);
+
             // We will update our cache file after each notification.
             // When our Registry has a subscribed failure due to network jitter, we can return at least the existing cache URL.
             if (localCacheEnabled) {
@@ -502,7 +566,7 @@ public abstract class AbstractRegistry implements Registry {
                 registryCacheExecutor.schedule(() -> doSaveProperties(version), DEFAULT_INTERVAL_SAVE_PROPERTIES, TimeUnit.MILLISECONDS);
             }
         } catch (Throwable t) {
-            logger.warn(t.getMessage(), t);
+            logger.warn(REGISTRY_UNEXPECTED_EXCEPTION, "", "", t.getMessage(), t);
         }
     }
 
@@ -521,7 +585,9 @@ public abstract class AbstractRegistry implements Registry {
                             logger.info("Destroy unregister url " + url);
                         }
                     } catch (Throwable t) {
-                        logger.warn("Failed to unregister url " + url + " to registry " + getUrl() + " on destroy, cause: " + t.getMessage(), t);
+                        // 1-8: Failed to unregister / unsubscribe url on destroy.
+                        logger.warn(REGISTRY_FAILED_DESTROY_UNREGISTER_URL, "", "",
+                            "Failed to unregister url " + url + " to registry " + getUrl() + " on destroy, cause: " + t.getMessage(), t);
                     }
                 }
             }
@@ -537,7 +603,9 @@ public abstract class AbstractRegistry implements Registry {
                             logger.info("Destroy unsubscribe url " + url);
                         }
                     } catch (Throwable t) {
-                        logger.warn("Failed to unsubscribe url " + url + " to registry " + getUrl() + " on destroy, cause: " + t.getMessage(), t);
+                        // 1-8: Failed to unregister / unsubscribe url on destroy.
+                        logger.warn(REGISTRY_FAILED_DESTROY_UNREGISTER_URL, "", "",
+                            "Failed to unsubscribe url " + url + " to registry " + getUrl() + " on destroy, cause: " + t.getMessage(), t);
                     }
                 }
             }

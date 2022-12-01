@@ -17,7 +17,7 @@
 package org.apache.dubbo.rpc.cluster.support;
 
 import org.apache.dubbo.common.URL;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.rpc.Invocation;
 import org.apache.dubbo.rpc.Invoker;
@@ -32,12 +32,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.CLUSTER_ERROR_RESPONSE;
+
 /**
  * BroadcastClusterInvoker
  */
 public class BroadcastClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
-    private static final Logger logger = LoggerFactory.getLogger(BroadcastClusterInvoker.class);
+    private static final ErrorTypeAwareLogger logger = LoggerFactory.getErrorTypeAwareLogger(BroadcastClusterInvoker.class);
     private static final String BROADCAST_FAIL_PERCENT_KEY = "broadcast.fail.percent";
     private static final int MAX_BROADCAST_FAIL_PERCENT = 100;
     private static final int MIN_BROADCAST_FAIL_PERCENT = 0;
@@ -81,7 +83,7 @@ public class BroadcastClusterInvoker<T> extends AbstractClusterInvoker<T> {
                     Throwable resultException = result.getException();
                     if (null != resultException) {
                         exception = getRpcException(result.getException());
-                        logger.warn(exception.getMessage(), exception);
+                        logger.warn(CLUSTER_ERROR_RESPONSE,"provider return error response","",exception.getMessage(),exception);
                         failIndex++;
                         if (failIndex == failThresholdIndex) {
                             break;
@@ -90,7 +92,7 @@ public class BroadcastClusterInvoker<T> extends AbstractClusterInvoker<T> {
                 }
             } catch (Throwable e) {
                 exception = getRpcException(e);
-                logger.warn(exception.getMessage(), exception);
+                logger.warn(CLUSTER_ERROR_RESPONSE,"provider return error response","",exception.getMessage(),exception);
                 failIndex++;
                 if (failIndex == failThresholdIndex) {
                     break;

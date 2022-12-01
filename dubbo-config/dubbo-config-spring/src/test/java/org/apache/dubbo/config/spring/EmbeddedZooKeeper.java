@@ -15,11 +15,11 @@
  */
 package org.apache.dubbo.config.spring;
 
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
+import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.zookeeper.server.ServerConfig;
 import org.apache.zookeeper.server.ZooKeeperServerMain;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.util.ErrorHandler;
 import org.springframework.util.SocketUtils;
@@ -29,6 +29,9 @@ import java.lang.reflect.Method;
 import java.util.Properties;
 import java.util.UUID;
 
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.CONFIG_ZOOKEEPER_SERVER_ERROR;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.REGISTRY_FAILED_STOP_ZOOKEEPER;
+
 /**
  * from: https://github.com/spring-projects/spring-xd/blob/v1.3.1.RELEASE/spring-xd-dirt/src/main/java/org/springframework/xd/dirt/zookeeper/ZooKeeperUtils.java
  * <p>
@@ -36,14 +39,13 @@ import java.util.UUID;
  * <p>
  * NOTE: at least an external standalone server (if not an ensemble) are recommended, even for
  * {@link org.springframework.xd.dirt.server.singlenode.SingleNodeApplication}
- *
  */
 public class EmbeddedZooKeeper implements SmartLifecycle {
 
     /**
      * Logger.
      */
-    private static final Logger logger = LoggerFactory.getLogger(EmbeddedZooKeeper.class);
+    private static final ErrorTypeAwareLogger logger = LoggerFactory.getErrorTypeAwareLogger(EmbeddedZooKeeper.class);
 
     /**
      * ZooKeeper client port. This will be determined dynamically upon startup.
@@ -185,7 +187,7 @@ public class EmbeddedZooKeeper implements SmartLifecycle {
                 zkServerThread = null;
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                logger.warn("Interrupted while waiting for embedded ZooKeeper to exit");
+                logger.warn(REGISTRY_FAILED_STOP_ZOOKEEPER, "", "", "Interrupted while waiting for embedded ZooKeeper to exit");
                 // abandoning zk thread
                 zkServerThread = null;
             }
@@ -221,7 +223,7 @@ public class EmbeddedZooKeeper implements SmartLifecycle {
             try {
                 Properties properties = new Properties();
                 File file = new File(System.getProperty("java.io.tmpdir")
-                        + File.separator + UUID.randomUUID());
+                    + File.separator + UUID.randomUUID());
                 file.deleteOnExit();
                 properties.setProperty("dataDir", file.getAbsolutePath());
                 properties.setProperty("clientPort", String.valueOf(clientPort));
@@ -238,7 +240,7 @@ public class EmbeddedZooKeeper implements SmartLifecycle {
                 if (errorHandler != null) {
                     errorHandler.handleError(e);
                 } else {
-                    logger.error("Exception running embedded ZooKeeper", e);
+                    logger.error(CONFIG_ZOOKEEPER_SERVER_ERROR, "ZooKeeper server error", "", "Exception running embedded ZooKeeper.", e);
                 }
             }
         }

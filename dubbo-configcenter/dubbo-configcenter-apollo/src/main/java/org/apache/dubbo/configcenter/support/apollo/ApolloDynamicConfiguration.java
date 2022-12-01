@@ -21,7 +21,7 @@ import org.apache.dubbo.common.config.configcenter.ConfigChangeType;
 import org.apache.dubbo.common.config.configcenter.ConfigChangedEvent;
 import org.apache.dubbo.common.config.configcenter.ConfigurationListener;
 import org.apache.dubbo.common.config.configcenter.DynamicConfiguration;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.StringUtils;
 
@@ -47,6 +47,9 @@ import static org.apache.dubbo.common.constants.CommonConstants.CHECK_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.CLUSTER_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.COMMA_SPLIT_PATTERN;
 import static org.apache.dubbo.common.constants.CommonConstants.CONFIG_NAMESPACE_KEY;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.CONFIG_FAILED_CONNECT_REGISTRY;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.CONFIG_FAILED_CLOSE_CONNECT_APOLLO;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.CONFIG_NOT_EFFECT_EMPTY_RULE_APOLLO;
 
 /**
  * Apollo implementation, https://github.com/ctripcorp/apollo
@@ -61,7 +64,7 @@ import static org.apache.dubbo.common.constants.CommonConstants.CONFIG_NAMESPACE
  * Please see http://dubbo.apache.org/zh-cn/docs/user/configuration/config-center.html for details.
  */
 public class ApolloDynamicConfiguration implements DynamicConfiguration {
-    private static final Logger logger = LoggerFactory.getLogger(ApolloDynamicConfiguration.class);
+    private static final ErrorTypeAwareLogger logger = LoggerFactory.getErrorTypeAwareLogger(ApolloDynamicConfiguration.class);
     private static final String APOLLO_ENV_KEY = "env";
     private static final String APOLLO_ADDR_KEY = "apollo.meta";
     private static final String APOLLO_CLUSTER_KEY = "apollo.cluster";
@@ -106,7 +109,10 @@ public class ApolloDynamicConfiguration implements DynamicConfiguration {
                 throw new IllegalStateException("Failed to connect to config center, the config center is Apollo, " +
                     "the address is: " + (StringUtils.isNotEmpty(configAddr) ? configAddr : configEnv));
             } else {
-                logger.warn("Failed to connect to config center, the config center is Apollo, " +
+                // 5-1 Failed to connect to configuration center.
+
+                logger.warn(CONFIG_FAILED_CONNECT_REGISTRY, "configuration server offline", "",
+                    "Failed to connect to config center, the config center is Apollo, " +
                     "the address is: " + (StringUtils.isNotEmpty(configAddr) ? configAddr : configEnv) +
                     ", will use the local cache value instead before eventually the connection is established.");
             }
@@ -118,7 +124,7 @@ public class ApolloDynamicConfiguration implements DynamicConfiguration {
         try {
             listeners.clear();
         } catch (UnsupportedOperationException e) {
-            logger.warn("Failed to close connect from config center, the config center is Apollo");
+            logger.warn(CONFIG_FAILED_CLOSE_CONNECT_APOLLO, "", "", "Failed to close connect from config center, the config center is Apollo");
         }
     }
 
@@ -232,7 +238,7 @@ public class ApolloDynamicConfiguration implements DynamicConfiguration {
             for (String key : changeEvent.changedKeys()) {
                 ConfigChange change = changeEvent.getChange(key);
                 if ("".equals(change.getNewValue())) {
-                    logger.warn("an empty rule is received for " + key + ", the current working rule is " +
+                    logger.warn(CONFIG_NOT_EFFECT_EMPTY_RULE_APOLLO, "", "", "an empty rule is received for " + key + ", the current working rule is " +
                         change.getOldValue() + ", the empty rule will not take effect.");
                     return;
                 }

@@ -25,8 +25,8 @@ import org.apache.dubbo.config.RegistryConfig;
 import org.apache.dubbo.config.ServiceConfig;
 import org.apache.dubbo.config.bootstrap.DubboBootstrap;
 import org.apache.dubbo.config.integration.IntegrationTest;
-import org.apache.dubbo.config.metadata.MetadataServiceDelegation;
 import org.apache.dubbo.registry.RegistryServiceListener;
+import org.apache.dubbo.registry.client.metadata.MetadataServiceDelegation;
 import org.apache.dubbo.test.check.registrycenter.config.ZookeeperConfig;
 import org.apache.dubbo.test.check.registrycenter.config.ZookeeperRegistryCenterConfig;
 
@@ -48,7 +48,7 @@ import static org.apache.dubbo.config.integration.Constants.MULTIPLE_CONFIG_CENT
 /**
  * The testcases are only for checking the process of exporting provider using service-discovery-registry protocol.
  */
-public class MultipleRegistryCenterServiceDiscoveryRegistryIntegrationTest implements IntegrationTest {
+class MultipleRegistryCenterServiceDiscoveryRegistryIntegrationTest implements IntegrationTest {
 
     private static final Logger logger = LoggerFactory.getLogger(MultipleRegistryCenterServiceDiscoveryRegistryIntegrationTest.class);
 

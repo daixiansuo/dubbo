@@ -19,6 +19,7 @@ package org.apache.dubbo.rpc.protocol.dubbo;
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.serialize.ObjectOutput;
 import org.apache.dubbo.common.serialize.Serialization;
+import org.apache.dubbo.common.serialize.support.DefaultSerializationSelector;
 import org.apache.dubbo.common.url.component.ServiceConfigURL;
 import org.apache.dubbo.common.utils.CollectionUtils;
 import org.apache.dubbo.remoting.Channel;
@@ -47,10 +48,10 @@ import static org.apache.dubbo.rpc.protocol.dubbo.DubboCodec.DUBBO_VERSION;
 /**
  * {@link DecodeableRpcInvocation}
  */
-public class DecodeableRpcInvocationTest {
+class DecodeableRpcInvocationTest {
 
     @Test
-    public void test() throws Exception {
+    void test() throws Exception {
         // Simulate the data called by the client(The called data is stored in invocation and written to the buffer)
         URL url = new ServiceConfigURL("dubbo", "127.0.0.1", 9103, DemoService.class.getName(), VERSION_KEY, "1.0.0");
         RpcInvocation inv = new RpcInvocation(null, "sayHello", DemoService.class.getName(), "", new Class<?>[]{String.class}, new String[]{"yug"});
@@ -61,7 +62,7 @@ public class DecodeableRpcInvocationTest {
         inv.setObjectAttachment("k2", "v2");
         inv.setTargetServiceUniqueName(url.getServiceKey());
         // Write the data of inv to the buffer
-        Byte proto = CodecSupport.getIDByName("hessian2");
+        Byte proto = CodecSupport.getIDByName(DefaultSerializationSelector.getDefaultRemotingSerialization());
         ChannelBuffer buffer = writeBuffer(url, inv, proto);
 
         FrameworkModel frameworkModel = new FrameworkModel();

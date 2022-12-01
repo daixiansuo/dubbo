@@ -40,13 +40,21 @@
             <artifactId>dubbo-remoting-api</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+
         <dependency>
             <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
+            <artifactId>netty-handler-proxy</artifactId>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.dubbo</groupId>
             <artifactId>dubbo-serialization-hessian2</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.dubbo</groupId>
+            <artifactId>dubbo-serialization-fastjson2</artifactId>
             <version>${project.parent.version}</version>
             <scope>test</scope>
         </dependency>

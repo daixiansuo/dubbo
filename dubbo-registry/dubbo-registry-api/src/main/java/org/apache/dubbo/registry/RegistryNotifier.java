@@ -17,7 +17,7 @@
 package org.apache.dubbo.registry;
 
 import org.apache.dubbo.common.URL;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.threadpool.manager.FrameworkExecutorRepository;
 
@@ -27,10 +27,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_DELAY_EXECUTE_TIMES;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.REGISTRY_FAILED_NOTIFY_EVENT;
 
 public abstract class RegistryNotifier {
 
-    private static final Logger logger = LoggerFactory.getLogger(RegistryNotifier.class);
+    private static final ErrorTypeAwareLogger logger = LoggerFactory.getErrorTypeAwareLogger(RegistryNotifier.class);
     private volatile long lastExecuteTime;
     private volatile long lastEventTime;
 
@@ -111,7 +112,7 @@ public abstract class RegistryNotifier {
                     }
                 }
             } catch (Throwable t) {
-                logger.error("Error occurred when notify directory. ", t);
+                logger.error(REGISTRY_FAILED_NOTIFY_EVENT, "", "", "Error occurred when notify directory. ", t);
             }
         }
     }

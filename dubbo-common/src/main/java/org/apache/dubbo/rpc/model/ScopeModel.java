@@ -21,7 +21,7 @@ import org.apache.dubbo.common.config.Environment;
 import org.apache.dubbo.common.extension.ExtensionAccessor;
 import org.apache.dubbo.common.extension.ExtensionDirector;
 import org.apache.dubbo.common.extension.ExtensionScope;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.ConcurrentHashSet;
 import org.apache.dubbo.common.utils.StringUtils;
@@ -35,8 +35,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.CONFIG_UNABLE_DESTROY_MODEL;
+
 public abstract class ScopeModel implements ExtensionAccessor {
-    protected static final Logger LOGGER = LoggerFactory.getLogger(ScopeModel.class);
+    protected static final ErrorTypeAwareLogger LOGGER = LoggerFactory.getErrorTypeAwareLogger(ScopeModel.class);
 
     /**
      * The internal id is used to represent the hierarchy of the model tree, such as:
@@ -70,6 +72,8 @@ public abstract class ScopeModel implements ExtensionAccessor {
     private ScopeBeanFactory beanFactory;
     private List<ScopeModelDestroyListener> destroyListeners;
 
+    private List<ScopeClassLoaderListener> classLoaderListeners;
+
     private Map<String, Object> attributes;
     private final AtomicBoolean destroyed = new AtomicBoolean(false);
     private final boolean internalScope;
@@ -94,6 +98,7 @@ public abstract class ScopeModel implements ExtensionAccessor {
         this.extensionDirector.addExtensionPostProcessor(new ScopeModelAwareExtensionProcessor(this));
         this.beanFactory = new ScopeBeanFactory(parent != null ? parent.getBeanFactory() : null, extensionDirector);
         this.destroyListeners = new LinkedList<>();
+        this.classLoaderListeners = new LinkedList<>();
         this.attributes = new ConcurrentHashMap<>();
         this.classLoaders = new ConcurrentHashSet<>();
 
@@ -119,7 +124,7 @@ public abstract class ScopeModel implements ExtensionAccessor {
                     extensionDirector.destroy();
                 }
             } catch (Throwable t) {
-                LOGGER.error("Error happened when destroying ScopeModel.", t);
+                LOGGER.error(CONFIG_UNABLE_DESTROY_MODEL, "", "", "Error happened when destroying ScopeModel.", t);
             }
         }
     }
@@ -142,10 +147,26 @@ public abstract class ScopeModel implements ExtensionAccessor {
         }
     }
 
+    protected void notifyClassLoaderAdd(ClassLoader classLoader) {
+        for (ScopeClassLoaderListener classLoaderListener : classLoaderListeners) {
+            classLoaderListener.onAddClassLoader(this, classLoader);
+        }
+    }
+
+    protected void notifyClassLoaderDestroy(ClassLoader classLoader) {
+        for (ScopeClassLoaderListener classLoaderListener : classLoaderListeners) {
+            classLoaderListener.onRemoveClassLoader(this, classLoader);
+        }
+    }
+
     protected abstract void onDestroy();
 
     public final void addDestroyListener(ScopeModelDestroyListener listener) {
         destroyListeners.add(listener);
+    }
+
+    public final void addClassLoaderListener(ScopeClassLoaderListener listener) {
+        classLoaderListeners.add(listener);
     }
 
     public Map<String, Object> getAttributes() {
@@ -187,6 +208,7 @@ public abstract class ScopeModel implements ExtensionAccessor {
             parent.addClassLoader(classLoader);
         }
         extensionDirector.removeAllCachedLoader();
+        notifyClassLoaderAdd(classLoader);
     }
 
     public void removeClassLoader(ClassLoader classLoader) {
@@ -196,6 +218,7 @@ public abstract class ScopeModel implements ExtensionAccessor {
                 parent.removeClassLoader(classLoader);
             }
             extensionDirector.removeAllCachedLoader();
+            notifyClassLoaderDestroy(classLoader);
         }
     }
 

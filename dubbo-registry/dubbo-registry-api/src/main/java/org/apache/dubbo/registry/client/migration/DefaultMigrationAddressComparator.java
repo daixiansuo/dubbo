@@ -17,7 +17,7 @@
 package org.apache.dubbo.registry.client.migration;
 
 import org.apache.dubbo.common.config.ConfigurationUtils;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.CollectionUtils;
 import org.apache.dubbo.common.utils.StringUtils;
@@ -29,8 +29,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.PROTOCOL_INCORRECT_PARAMETER_VALUES;
+
 public class DefaultMigrationAddressComparator implements MigrationAddressComparator {
-    private static final Logger logger = LoggerFactory.getLogger(DefaultMigrationAddressComparator.class);
+    private static final ErrorTypeAwareLogger logger = LoggerFactory.getErrorTypeAwareLogger(DefaultMigrationAddressComparator.class);
     private static final String MIGRATION_THRESHOLD = "dubbo.application.migration.threshold";
     private static final String DEFAULT_THRESHOLD_STRING = "0.0";
     private static final float DEFAULT_THREAD = 0f;
@@ -73,7 +75,7 @@ public class DefaultMigrationAddressComparator implements MigrationAddressCompar
         try {
             threshold = Float.parseFloat(rawThreshold);
         } catch (Exception e) {
-            logger.error("Invalid migration threshold " + rawThreshold);
+            logger.error(PROTOCOL_INCORRECT_PARAMETER_VALUES, "", "", "Invalid migration threshold " + rawThreshold);
             threshold = DEFAULT_THREAD;
         }
 

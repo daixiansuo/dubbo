@@ -17,7 +17,7 @@
 package org.apache.dubbo.registry.support;
 
 import org.apache.dubbo.common.URL;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.registry.NotifyListener;
 import org.apache.dubbo.registry.Registry;
@@ -36,11 +36,14 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.REGISTRY_FAILED_FETCH_INSTANCE;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.REGISTRY_UNEXPECTED_EXCEPTION;
+
 /**
  * Application Level, used to collect Registries
  */
 public class RegistryManager {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RegistryManager.class);
+    private static final ErrorTypeAwareLogger LOGGER = LoggerFactory.getErrorTypeAwareLogger(RegistryManager.class);
 
     private ApplicationModel applicationModel;
 
@@ -77,7 +80,7 @@ public class RegistryManager {
         registries.put(key, registry);
     }
 
-    public  List<ServiceDiscovery> getServiceDiscoveries() {
+    public List<ServiceDiscovery> getServiceDiscoveries() {
         return getRegistries()
             .stream()
             .filter(registry -> registry instanceof ServiceDiscoveryRegistry)
@@ -104,7 +107,7 @@ public class RegistryManager {
                 try {
                     registry.destroy();
                 } catch (Throwable e) {
-                    LOGGER.warn(e.getMessage(), e);
+                    LOGGER.warn(REGISTRY_UNEXPECTED_EXCEPTION, "", "", e.getMessage(), e);
                 }
             }
             registries.clear();
@@ -124,8 +127,11 @@ public class RegistryManager {
 
     protected Registry getDefaultNopRegistryIfDestroyed() {
         if (destroyed.get()) {
-            LOGGER.warn("All registry instances have been destroyed, failed to fetch any instance. " +
-                "Usually, this means no need to try to do unnecessary redundant resource clearance, all registries has been taken care of.");
+            // 1-12 Failed to fetch (server) instance since the registry instances have been destroyed.
+            LOGGER.warn(REGISTRY_FAILED_FETCH_INSTANCE, "misuse of the methods", "",
+                "All registry instances have been destroyed, failed to fetch any instance. " +
+                    "Usually, this means no need to try to do unnecessary redundant resource clearance, all registries has been taken care of.");
+
             return DEFAULT_NOP_REGISTRY;
         }
         return null;

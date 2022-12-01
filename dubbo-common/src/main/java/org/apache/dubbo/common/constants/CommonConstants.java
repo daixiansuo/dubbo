@@ -112,6 +112,8 @@ public interface CommonConstants {
 
     String EXECUTOR_SERVICE_COMPONENT_KEY = ExecutorService.class.getName();
 
+    String CONSUMER_SHARED_EXECUTOR_SERVICE_COMPONENT_KEY = "CONSUMER_SHARED_SERVICE_EXECUTOR";
+
     String INTERNAL_EXECUTOR_SERVICE_COMPONENT_KEY = "INTERNAL_SERVICE_EXECUTOR";
 
     String THREADPOOL_KEY = "threadpool";
@@ -119,6 +121,8 @@ public interface CommonConstants {
     String THREAD_NAME_KEY = "threadname";
 
     String CORE_THREADS_KEY = "corethreads";
+
+    String THREAD_POOL_EXHAUSTED_LISTENERS_KEY = "thread-pool-exhausted-listeners";
 
     String THREADS_KEY = "threads";
 
@@ -392,6 +396,8 @@ public interface CommonConstants {
 
     String PROTOCOL_SERVER = "server";
 
+    String IPV6_KEY = "ipv6";
+
     /**
      * The parameter key for the class path of the ServiceNameMapping {@link Properties} file
      *
@@ -437,6 +443,8 @@ public interface CommonConstants {
     String CLASSPATH_URL_PREFIX = "classpath:";
 
     String DEFAULT_VERSION = "0.0.0";
+
+    String CLASS_DESERIALIZE_OPEN_CHECK = "dubbo.security.serialize.openCheckClass";
 
     String ROUTER_KEY = "router";
 
@@ -545,5 +553,32 @@ public interface CommonConstants {
     String OPTIMIZER_KEY = "optimizer";
 
     String PREFER_JSON_FRAMEWORK_NAME = "dubbo.json-framework.prefer";
+
+    /**
+     * @since 3.1.0
+     */
+    String MESH_ENABLE = "mesh-enable";
+
+    /**
+     * @since 3.1.0
+     */
+    Integer DEFAULT_MESH_PORT = 80;
+
+    /**
+     * @since 3.1.0
+     */
+    String SVC = ".svc.";
+
+    /**
+     * Domain name suffix used inside k8s.
+     *
+     * @since 3.1.0
+     */
+    String DEFAULT_CLUSTER_DOMAIN = "cluster.local";
+
+    /**
+     * @since 3.1.0
+     */
+    String UNLOAD_CLUSTER_RELATED = "unloadClusterRelated";
 
 }

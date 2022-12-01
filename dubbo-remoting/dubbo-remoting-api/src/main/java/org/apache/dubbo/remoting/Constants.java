@@ -79,13 +79,15 @@ public interface Constants {
 
     String SERIALIZATION_KEY = "serialization";
 
-    String DEFAULT_REMOTING_SERIALIZATION = "hessian2";
+    String DEFAULT_REMOTING_SERIALIZATION_PROPERTY_KEY = "DUBBO_DEFAULT_SERIALIZATION";
 
     String CODEC_KEY = "codec";
 
     String CODEC_VERSION_KEY = "codec.version";
 
     String SERVER_KEY = "server";
+
+    String IS_PU_SERVER_KEY = "ispuserver";
 
     String CLIENT_KEY = "client";
 

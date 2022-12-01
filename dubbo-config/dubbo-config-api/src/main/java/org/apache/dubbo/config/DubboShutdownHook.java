@@ -18,12 +18,14 @@ package org.apache.dubbo.config;
 
 import org.apache.dubbo.common.config.ConfigurationUtils;
 import org.apache.dubbo.common.constants.CommonConstants;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.Assert;
 import org.apache.dubbo.rpc.model.ApplicationModel;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.CONFIG_FAILED_SHUTDOWN_HOOK;
 
 /**
  * The shutdown hook thread to do the cleanup stuff.
@@ -33,7 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class DubboShutdownHook extends Thread {
 
-    private static final Logger logger = LoggerFactory.getLogger(DubboShutdownHook.class);
+    private static final ErrorTypeAwareLogger logger = LoggerFactory.getErrorTypeAwareLogger(DubboShutdownHook.class);
 
     private final ApplicationModel applicationModel;
 
@@ -86,9 +88,9 @@ public class DubboShutdownHook extends Thread {
             try {
                 Runtime.getRuntime().addShutdownHook(this);
             } catch (IllegalStateException e) {
-                logger.warn("register shutdown hook failed: " + e.getMessage());
+                logger.warn(CONFIG_FAILED_SHUTDOWN_HOOK, "", "", "register shutdown hook failed: " + e.getMessage(), e);
             } catch (Exception e) {
-                logger.warn("register shutdown hook failed: " + e.getMessage(), e);
+                logger.warn(CONFIG_FAILED_SHUTDOWN_HOOK, "", "", "register shutdown hook failed: " + e.getMessage(), e);
             }
         }
     }
@@ -105,9 +107,9 @@ public class DubboShutdownHook extends Thread {
             try {
                 Runtime.getRuntime().removeShutdownHook(this);
             } catch (IllegalStateException e) {
-                logger.warn("unregister shutdown hook failed: " + e.getMessage());
+                logger.warn(CONFIG_FAILED_SHUTDOWN_HOOK, "", "", "unregister shutdown hook failed: " + e.getMessage(), e);
             } catch (Exception e) {
-                logger.warn("unregister shutdown hook failed: " + e.getMessage(), e);
+                logger.warn(CONFIG_FAILED_SHUTDOWN_HOOK, "", "", "unregister shutdown hook failed: " + e.getMessage(), e);
             }
         }
     }

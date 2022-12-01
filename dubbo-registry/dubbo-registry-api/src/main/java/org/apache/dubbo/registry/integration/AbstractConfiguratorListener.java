@@ -21,7 +21,7 @@ import org.apache.dubbo.common.config.configcenter.ConfigChangeType;
 import org.apache.dubbo.common.config.configcenter.ConfigChangedEvent;
 import org.apache.dubbo.common.config.configcenter.ConfigurationListener;
 import org.apache.dubbo.common.config.configcenter.DynamicConfiguration;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.rpc.cluster.Configurator;
@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.REGISTRY_FAILED_PARSE_DYNAMIC_CONFIG;
 import static org.apache.dubbo.rpc.Constants.ACCESS_LOG_KEY;
 import static org.apache.dubbo.rpc.cluster.Constants.ROUTER_KEY;
 import static org.apache.dubbo.rpc.cluster.Constants.RULE_KEY;
@@ -45,7 +46,7 @@ import static org.apache.dubbo.rpc.cluster.Constants.TYPE_KEY;
  * AbstractConfiguratorListener
  */
 public abstract class AbstractConfiguratorListener implements ConfigurationListener {
-    private static final Logger logger = LoggerFactory.getLogger(AbstractConfiguratorListener.class);
+    private static final ErrorTypeAwareLogger logger = LoggerFactory.getErrorTypeAwareLogger(AbstractConfiguratorListener.class);
 
     protected List<Configurator> configurators = Collections.emptyList();
     protected GovernanceRuleRepository ruleRepository;
@@ -107,8 +108,12 @@ public abstract class AbstractConfiguratorListener implements ConfigurationListe
             // parseConfigurators will recognize app/service config automatically.
             urls = ConfigParser.parseConfigurators(rawConfig);
         } catch (Exception e) {
-            logger.warn("Failed to parse raw dynamic config and it will not take effect, the raw config is: "
+            // 1-14 - Failed to parse raw dynamic config.
+
+            logger.warn(REGISTRY_FAILED_PARSE_DYNAMIC_CONFIG, "", "",
+                "Failed to parse raw dynamic config and it will not take effect, the raw config is: "
                     + rawConfig + ", cause: " + e.getMessage());
+
             return false;
         }
         List<URL> safeUrls = urls.stream()

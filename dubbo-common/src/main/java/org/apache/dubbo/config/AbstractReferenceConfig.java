@@ -27,6 +27,8 @@ import static org.apache.dubbo.common.constants.CommonConstants.REFER_ASYNC_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.ROUTER_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.STUB_EVENT_KEY;
 import static org.apache.dubbo.common.constants.RegistryConstants.PROVIDED_BY;
+import static org.apache.dubbo.common.constants.RegistryConstants.PROVIDER_NAMESPACE;
+import static org.apache.dubbo.common.constants.RegistryConstants.PROVIDER_PORT;
 
 /**
  * AbstractConsumerConfig
@@ -76,18 +78,32 @@ public abstract class AbstractReferenceConfig extends AbstractInterfaceConfig {
     protected Boolean stubevent;//= Constants.DEFAULT_STUB_EVENT;
 
 
-
     /**
      * declares which app or service this interface belongs to
      */
     protected String providedBy;
 
+    /**
+     * By VirtualService and DestinationRule, envoy will generate a new route rule,such as 'demo.default.svc.cluster.local:80',the default port is 80.
+     * When you want to specify the provider port,you can use this config.
+     *
+     * @since 3.1.0
+     */
+    protected Integer providerPort;
+
+    /**
+     * assign the namespace that provider belong to
+     * @since 3.1.1
+     */
+    protected String providerNamespace;
+
     protected String router;
 
     /**
      * Weather the reference is referred asynchronously
-     * @deprecated
+     *
      * @see ModuleConfig#referAsync
+     * @deprecated
      */
     @Deprecated
     private Boolean referAsync;
@@ -248,7 +264,6 @@ public abstract class AbstractReferenceConfig extends AbstractInterfaceConfig {
     }
 
 
-
     @Parameter(key = PROVIDED_BY)
     public String getProvidedBy() {
         return providedBy;
@@ -256,6 +271,24 @@ public abstract class AbstractReferenceConfig extends AbstractInterfaceConfig {
 
     public void setProvidedBy(String providedBy) {
         this.providedBy = providedBy;
+    }
+
+    @Parameter(key = PROVIDER_PORT)
+    public Integer getProviderPort() {
+        return providerPort;
+    }
+
+    public void setProviderPort(Integer providerPort) {
+        this.providerPort = providerPort;
+    }
+
+    @Parameter(key = PROVIDER_NAMESPACE)
+    public String getProviderNamespace() {
+        return providerNamespace;
+    }
+
+    public void setProviderNamespace(String providerNamespace) {
+        this.providerNamespace = providerNamespace;
     }
 
     @Parameter(key = ROUTER_KEY, append = true)

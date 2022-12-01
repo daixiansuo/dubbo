@@ -18,7 +18,7 @@ package org.apache.dubbo.registry.client.metadata;
 
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.config.configcenter.ConfigItem;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.CollectionUtils;
 import org.apache.dubbo.common.utils.StringUtils;
@@ -37,10 +37,12 @@ import java.util.Set;
 
 import static org.apache.dubbo.common.constants.CommonConstants.COMMA_SEPARATOR;
 import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_KEY;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.REGISTRY_ADDRESS_INVALID;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.REGISTRY_UNEXPECTED_EXCEPTION;
 
 public class MetadataServiceNameMapping extends AbstractServiceNameMapping {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final ErrorTypeAwareLogger logger = LoggerFactory.getErrorTypeAwareLogger(getClass());
 
     private static final List<String> IGNORED_SERVICE_INTERFACES = Collections.singletonList(MetadataService.class.getName());
 
@@ -58,7 +60,7 @@ public class MetadataServiceNameMapping extends AbstractServiceNameMapping {
     @Override
     public boolean map(URL url) {
         if (CollectionUtils.isEmpty(applicationModel.getApplicationConfigManager().getMetadataConfigs())) {
-            logger.warn("No valid metadata config center found for mapping report.");
+            logger.warn(REGISTRY_ADDRESS_INVALID, "", "", "No valid metadata config center found for mapping report.");
             return false;
         }
         String serviceInterface = url.getServiceInterface();
@@ -99,7 +101,7 @@ public class MetadataServiceNameMapping extends AbstractServiceNameMapping {
                 }
             } catch (Exception e) {
                 result = false;
-                logger.warn("Failed registering mapping to remote." + metadataReport, e);
+                logger.warn(REGISTRY_UNEXPECTED_EXCEPTION, "", "", "Failed registering mapping to remote." + metadataReport, e);
             }
         }
 

@@ -17,41 +17,64 @@
 package org.apache.dubbo.remoting.exchange;
 
 import org.apache.dubbo.common.URL;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
-import org.apache.dubbo.remoting.api.PortUnificationServer;
+import org.apache.dubbo.remoting.ChannelHandler;
+import org.apache.dubbo.remoting.RemotingException;
+import org.apache.dubbo.remoting.RemotingServer;
+import org.apache.dubbo.remoting.api.pu.AbstractPortUnificationServer;
+import org.apache.dubbo.remoting.api.pu.PortUnificationTransporter;
 
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.PROTOCOL_ERROR_CLOSE_SERVER;
+
 public class PortUnificationExchanger {
 
-    private static final Logger log = LoggerFactory.getLogger(PortUnificationExchanger.class);
-    private static final ConcurrentMap<String, PortUnificationServer> servers = new ConcurrentHashMap<>();
+    private static final ErrorTypeAwareLogger log = LoggerFactory.getErrorTypeAwareLogger(PortUnificationExchanger.class);
+    private static final ConcurrentMap<String, RemotingServer> servers = new ConcurrentHashMap<>();
 
-    public static void bind(URL url) {
+    public static RemotingServer bind(URL url, ChannelHandler handler) {
         servers.computeIfAbsent(url.getAddress(), addr -> {
-            final PortUnificationServer server = new PortUnificationServer(url);
-            server.bind();
+            final AbstractPortUnificationServer server;
+            try {
+                server = getTransporter(url).bind(url, handler);
+            } catch (RemotingException e) {
+                throw new RuntimeException(e);
+            }
+            // server.bind();
             return server;
         });
+
+        servers.computeIfPresent(url.getAddress(), (addr, server) -> {
+            ((AbstractPortUnificationServer) server).addSupportedProtocol(url, handler);
+            return server;
+        });
+        return servers.get(url.getAddress());
     }
 
     public static void close() {
-        final ArrayList<PortUnificationServer> toClose = new ArrayList<>(servers.values());
+        final ArrayList<RemotingServer> toClose = new ArrayList<>(servers.values());
         servers.clear();
-        for (PortUnificationServer server : toClose) {
+        for (RemotingServer server : toClose) {
             try {
                 server.close();
             } catch (Throwable throwable) {
-                log.error("Close all port unification server failed", throwable);
+                log.error(PROTOCOL_ERROR_CLOSE_SERVER, "", "", "Close all port unification server failed", throwable);
             }
         }
     }
 
     // for test
-    public static ConcurrentMap<String, PortUnificationServer> getServers() {
+    public static ConcurrentMap<String, RemotingServer> getServers() {
         return servers;
     }
+
+    public static PortUnificationTransporter getTransporter(URL url) {
+        return url.getOrDefaultFrameworkModel().getExtensionLoader(PortUnificationTransporter.class)
+            .getAdaptiveExtension();
+    }
+
 }

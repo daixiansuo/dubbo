@@ -18,11 +18,12 @@
 package org.apache.dubbo.rpc.protocol.tri;
 
 import org.apache.dubbo.common.URL;
-import org.apache.dubbo.common.constants.CommonConstants;
+import org.apache.dubbo.common.config.ConfigurationUtils;
 import org.apache.dubbo.common.logger.Logger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.threadpool.manager.ExecutorRepository;
 import org.apache.dubbo.remoting.api.ConnectionManager;
+import org.apache.dubbo.remoting.api.pu.DefaultPuHandler;
 import org.apache.dubbo.remoting.exchange.PortUnificationExchanger;
 import org.apache.dubbo.rpc.Exporter;
 import org.apache.dubbo.rpc.Invoker;
@@ -48,32 +49,33 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
-import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_CLIENT_THREADPOOL;
-import static org.apache.dubbo.common.constants.CommonConstants.THREADPOOL_KEY;
-import static org.apache.dubbo.common.constants.CommonConstants.THREAD_NAME_KEY;
+import static org.apache.dubbo.rpc.Constants.H2_SUPPORT_NO_LOWER_HEADER_KEY;
 
 public class TripleProtocol extends AbstractProtocol {
 
 
     public static final String METHOD_ATTR_PACK = "pack";
-    private static final String CLIENT_THREAD_POOL_NAME = "DubboTriClientHandler";
-    private static final URL THREAD_POOL_URL = new URL(CommonConstants.TRIPLE,
-        CommonConstants.LOCALHOST_VALUE, 50051)
-        .addParameter(THREAD_NAME_KEY, CLIENT_THREAD_POOL_NAME)
-        .addParameterIfAbsent(THREADPOOL_KEY, DEFAULT_CLIENT_THREADPOOL);
-
     private static final Logger logger = LoggerFactory.getLogger(TripleProtocol.class);
     private final PathResolver pathResolver;
     private final TriBuiltinService triBuiltinService;
     private final ConnectionManager connectionManager;
     private final String acceptEncodings;
+
+    /**
+     * There is only one
+     */
+    public static boolean CONVERT_NO_LOWER_HEADER = false;
+
     private boolean versionChecked = false;
+
 
     public TripleProtocol(FrameworkModel frameworkModel) {
         this.frameworkModel = frameworkModel;
         this.triBuiltinService = new TriBuiltinService(frameworkModel);
         this.pathResolver = frameworkModel.getExtensionLoader(PathResolver.class)
             .getDefaultExtension();
+        CONVERT_NO_LOWER_HEADER = ConfigurationUtils.getEnvConfiguration(ApplicationModel.defaultModel())
+            .getBoolean(H2_SUPPORT_NO_LOWER_HEADER_KEY, true);
         Set<String> supported = frameworkModel.getExtensionLoader(DeCompressor.class)
             .getSupportedExtensions();
         this.acceptEncodings = String.join(",", supported);
@@ -117,12 +119,12 @@ public class TripleProtocol extends AbstractProtocol {
             .setStatus(url.getServiceKey(), HealthCheckResponse.ServingStatus.SERVING);
         triBuiltinService.getHealthStatusManager()
             .setStatus(url.getServiceInterface(), HealthCheckResponse.ServingStatus.SERVING);
-
         // init
         url.getOrDefaultApplicationModel().getExtensionLoader(ExecutorRepository.class)
             .getDefaultExtension()
             .createExecutorIfAbsent(url);
-        PortUnificationExchanger.bind(url);
+
+        PortUnificationExchanger.bind(url, new DefaultPuHandler());
         optimizeSerialization(url);
         return exporter;
     }

@@ -17,7 +17,7 @@
 package org.apache.dubbo.registry.client.metadata;
 
 import org.apache.dubbo.common.URL;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.CollectionUtils;
 import org.apache.dubbo.metadata.MetadataInfo;
@@ -31,11 +31,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.PROTOCOL_FAILED_INIT_SERIALIZATION_OPTIMIZER;
+
 /**
  * The {@link ServiceInstanceCustomizer} to customize the {@link ServiceInstance#getPort() port} of service instance.
  */
 public class ServiceInstanceHostPortCustomizer implements ServiceInstanceCustomizer {
-    private static final Logger logger = LoggerFactory.getLogger(ServiceInstanceHostPortCustomizer.class);
+    private static final ErrorTypeAwareLogger logger = LoggerFactory.getErrorTypeAwareLogger(ServiceInstanceHostPortCustomizer.class);
     
 
     @Override
@@ -71,7 +73,14 @@ public class ServiceInstanceHostPortCustomizer implements ServiceInstanceCustomi
                 }
                 
                 if (host == null || port == -1) {
-                    logger.warn("The default preferredProtocol \"" + preferredProtocol + "\" is not found, fall back to the strategy that pick the first found protocol. Please try to modify the config of dubbo.application.protocol");
+
+                    // 4-2 - Can't find an instance URL using the default preferredProtocol.
+
+                    logger.warn(PROTOCOL_FAILED_INIT_SERIALIZATION_OPTIMIZER, "typo in preferred protocol", "",
+                        "Can't find an instance URL using the default preferredProtocol \"" + preferredProtocol + "\", " +
+                        "falling back to the strategy that pick the first found protocol. " +
+                        "Please try modifying the config of dubbo.application.protocol");
+
                     URL url = urls.iterator().next();
                     host = url.getHost();
                     port = url.getPort();
