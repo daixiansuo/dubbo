@@ -42,11 +42,13 @@ public class DefaultFilterChainBuilder implements FilterChainBuilder {
      */
     @Override
     public <T> Invoker<T> buildInvokerChain(final Invoker<T> originalInvoker, String key, String group) {
+        // originalInvoker 代表真正的服务调用器
         Invoker<T> last = originalInvoker;
         URL url = originalInvoker.getUrl();
         List<ModuleModel> moduleModels = getModuleModelsFromUrl(url);
         List<Filter> filters;
         if (moduleModels != null && moduleModels.size() == 1) {
+            // 类型 Filter key为 service.filter 分组为provider 所有提供者过滤器拉取
             filters = ScopeModelUtil.getExtensionLoader(Filter.class, moduleModels.get(0)).getActivateExtension(url, key, group);
         } else if (moduleModels != null && moduleModels.size() > 1) {
             filters = new ArrayList<>();
@@ -62,11 +64,12 @@ public class DefaultFilterChainBuilder implements FilterChainBuilder {
             filters = ScopeModelUtil.getExtensionLoader(Filter.class, null).getActivateExtension(url, key, group);
         }
 
-
+        // 倒序拼接，将过滤器的调用对象添加到链表中  最后倒序遍历之后 last节点指向了调用链路链表头节点的对象
         if (!CollectionUtils.isEmpty(filters)) {
             for (int i = filters.size() - 1; i >= 0; i--) {
                 final Filter filter = filters.get(i);
                 final Invoker<T> next = last;
+                //每个invoker对象中都有originalInvoker对象
                 last = new CopyOfFilterChainNode<>(originalInvoker, next, filter);
             }
             return new CallbackRegistrationInvoker<>(last, filters);

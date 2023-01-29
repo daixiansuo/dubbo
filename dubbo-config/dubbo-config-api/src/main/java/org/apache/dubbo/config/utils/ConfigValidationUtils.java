@@ -240,11 +240,14 @@ public class ConfigValidationUtils {
             if (provider) {
                 // for registries enabled service discovery, automatically register interface compatible addresses.
                 String registerMode;
+                // 注册协议配置了service-discovery-registry 走这个逻辑
+                // 前面这个逻辑是直接接给 result 结果中添加应用级注册，如果是all配置则增加接口级注册信息
                 if (SERVICE_REGISTRY_PROTOCOL.equals(registryURL.getProtocol())) {
                     registerMode = registryURL.getParameter(REGISTER_MODE_KEY, ConfigurationUtils.getCachedDynamicProperty(scopeModel, DUBBO_REGISTER_MODE_DEFAULT_KEY, DEFAULT_REGISTER_MODE_INSTANCE));
                     if (!isValidRegisterMode(registerMode)) {
                         registerMode = DEFAULT_REGISTER_MODE_INSTANCE;
                     }
+                    // 这里配置的就是应用级配置 则先添加应用级地址，再根据条件判断是否添加接口级注册中心地址
                     result.add(registryURL);
                     if (DEFAULT_REGISTER_MODE_ALL.equalsIgnoreCase(registerMode)
                         && registryNotExists(registryURL, registryList, REGISTRY_PROTOCOL)) {
@@ -255,10 +258,13 @@ public class ConfigValidationUtils {
                         result.add(interfaceCompatibleRegistryURL);
                     }
                 } else {
+                    // 正常情况下我们的配置会走这个逻辑
+                    // 获取服务注册的注册模式 配置为dubbo.application.register-mode 默认值为all 既注册接口数据又注册应用级信息
                     registerMode = registryURL.getParameter(REGISTER_MODE_KEY, ConfigurationUtils.getCachedDynamicProperty(scopeModel, DUBBO_REGISTER_MODE_DEFAULT_KEY, DEFAULT_REGISTER_MODE_ALL));
                     if (!isValidRegisterMode(registerMode)) {
                         registerMode = DEFAULT_REGISTER_MODE_INTERFACE;
                     }
+                    //根据逻辑条件判断是否添加应用级注册中心地址
                     if ((DEFAULT_REGISTER_MODE_INSTANCE.equalsIgnoreCase(registerMode) || DEFAULT_REGISTER_MODE_ALL.equalsIgnoreCase(registerMode))
                         && registryNotExists(registryURL, registryList, SERVICE_REGISTRY_PROTOCOL)) {
                         URL serviceDiscoveryRegistryURL = URLBuilder.from(registryURL)
@@ -268,6 +274,7 @@ public class ConfigValidationUtils {
                         result.add(serviceDiscoveryRegistryURL);
                     }
 
+                    // 根据逻辑条件判断是否添加接口级注册中心地址
                     if (DEFAULT_REGISTER_MODE_INTERFACE.equalsIgnoreCase(registerMode) || DEFAULT_REGISTER_MODE_ALL.equalsIgnoreCase(registerMode)) {
                         result.add(registryURL);
                     }

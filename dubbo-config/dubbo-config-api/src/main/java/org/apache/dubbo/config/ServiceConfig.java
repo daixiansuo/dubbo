@@ -374,25 +374,40 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
     private void doExportUrls() {
         ModuleServiceRepository repository = getScopeModel().getServiceRepository();
         ServiceDescriptor serviceDescriptor;
+        // 判断是否为 grpc 接口， 或者说是 triple 实现
         final boolean serverService = ref instanceof ServerService;
         if (serverService) {
             serviceDescriptor = ((ServerService) ref).getServiceDescriptor();
             repository.registerService(serviceDescriptor);
         } else {
+            // 我们代码走这个逻辑 注册服务 这个注册不是向注册中心注册
+            // 这个是解析服务接口将服务方法等描述信息存放在了服务存储ModuleServiceRepository类型对象的成员变量services中
             serviceDescriptor = repository.registerService(getInterfaceClass());
         }
+        // 提供者领域模型， 提供者领域模型 封装了一些提供者需要的就基本属性同时内部解析封装方法信息 ProviderMethodModel 列表 ， 服务标识符 格式group/服务接:版本号
         providerModel = new ProviderModel(serviceMetadata.getServiceKey(),
+            // 服务实现类DemoServiceImpl
             ref,
+            // 服务描述符 描述符里面包含了服务接口的方法信息，不过服务接口通过反射也可以拿到方法信息
             serviceDescriptor,
             getScopeModel(),
+            // 当前服务接口的元数据对象
             serviceMetadata, interfaceClassLoader);
 
         // Compatible with dependencies on ServiceModel#getServiceConfig(), and will be removed in a future version
+        // 服务配置
         providerModel.setConfig(this);
 
         providerModel.setDestroyRunner(getDestroyRunner());
+        // 模块服务存储库存储提供者模型对象ModuleServiceRepository
         repository.registerProvider(providerModel);
 
+        // 获取配置的注册中心列表 ，同时将注册中心配置转URL （在Dubbo中URL就是配置信息的一种形式）
+        // 这里会获取到两个  由dubbo.application.register-mode 双注册配置决定
+        // 注册中心 registry://127.0.0.1:2181/org.apache.dubbo.registry.RegistryService?application=dubbo-demo-api-provider&dubbo=2.0.2&pid=9008&registry=zookeeper&release=3.0.8&timestamp=1653703292768
+        // service-discovery-registry://8.131.79.126:2181/org.apache.dubbo.registry.RegistryService?application=dubbo-demo-api-provider&dubbo=2.0.2&pid=10275&registry=zookeeper&release=3.0.8&timestamp=1653704425920
+        // 参数dubbo是dubbo协议的版本不是Dubbo版本 Dubbo RPC protocol version, for compatibility, it must not be between 2.0.10 ~ 2.6.2
+        // 这里后面详细说下 服务双注册  dubbo.application.register-mode
         List<URL> registryURLs = ConfigValidationUtils.loadRegistries(this, true);
 
         for (ProtocolConfig protocolConfig : protocols) {
@@ -402,8 +417,10 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
             // stub service will use generated service name
             if (!serverService) {
                 // In case user specified path, register service one more time to map it to path.
+                // 模块服务存储库ModuleServiceRepository存储服务接口信息
                 repository.registerService(pathKey, interfaceClass);
             }
+            // 导出根据协议导出配置到注册中心
             doExportUrlsFor1Protocol(protocolConfig, registryURLs);
         }
 
@@ -411,15 +428,21 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
     }
 
     private void doExportUrlsFor1Protocol(ProtocolConfig protocolConfig, List<URL> registryURLs) {
+
+        // 生成协议配置具体可见下图中的元数据配置中的attachments
+        // @see https://cn.dubbo.apache.org/zh/blog/2022/08/16/16-%E6%A8%A1%E5%9D%97%E5%8F%91%E5%B8%83%E5%99%A8%E5%8F%91%E5%B8%83%E6%9C%8D%E5%8A%A1%E5%85%A8%E8%BF%87%E7%A8%8B/#165-%E5%AF%BC%E5%87%BA%E6%9C%8D%E5%8A%A1%E9%85%8D%E7%BD%AE%E5%88%B0%E6%9C%AC%E5%9C%B0%E5%92%8C%E6%B3%A8%E5%86%8C%E4%B8%AD%E5%BF%83
         Map<String, String> map = buildAttributes(protocolConfig);
 
         // remove null key and null value
+        // 移除空值 简化配置
         map.keySet().removeIf(key -> StringUtils.isEmpty(key) || StringUtils.isEmpty(map.get(key)));
         // init serviceMetadata attachments
+        // 协议配置放到元数据对象中
         serviceMetadata.getAttachments().putAll(map);
 
+        // 协议配置 + 默认协议配置转URL类型的配置存储
         URL url = buildUrl(protocolConfig, map);
-
+        // 导出 url
         exportUrl(url, registryURLs);
     }
 
@@ -576,7 +599,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         Integer port = findConfiguredPort(protocolConfig, provider, this.getExtensionLoader(Protocol.class), name, params);
         URL url = new ServiceConfigURL(name, null, null, host, port, getContextPath(protocolConfig).map(p -> p + "/" + path).orElse(path), params);
 
-        // You can customize Configurator to append extra parameters
+        // TODO: You can customize Configurator to append extra parameters
         if (this.getExtensionLoader(ConfiguratorFactory.class)
             .hasExtension(url.getProtocol())) {
             url = this.getExtensionLoader(ConfiguratorFactory.class)
@@ -593,11 +616,13 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         if (!SCOPE_NONE.equalsIgnoreCase(scope)) {
 
             // export to local if the config is not remote (export to remote only when config is remote)
+            // 未明确指定远程导出 则开启本地导出
             if (!SCOPE_REMOTE.equalsIgnoreCase(scope)) {
                 exportLocal(url);
             }
 
             // export to remote if the config is not local (export to local only when config is local)
+            // 未明确指定本地导出 则开启远程导出
             if (!SCOPE_LOCAL.equalsIgnoreCase(scope)) {
                 // export to extra protocol is used in remote export
                 String extProtocol = url.getParameter("ext.protocol", "");
@@ -621,8 +646,8 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                     protocols.addAll(Arrays.asList(extProtocols));
                 }
                 // export extra protocols
-                for(String protocol : protocols) {
-                    if(StringUtils.isNotBlank(protocol)){
+                for (String protocol : protocols) {
+                    if (StringUtils.isNotBlank(protocol)) {
                         URL localUrl = URLBuilder.from(url).
                             setProtocol(protocol).
                             build();
@@ -688,10 +713,12 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void doExportUrl(URL url, boolean withMetaData) {
+        // 这里是由adaptor扩展类型处理过的 我们直接看默认的类型javassist 对应JavassistProxyFactory代理工厂 获取调用对象 （
         Invoker<?> invoker = proxyFactory.getInvoker(ref, (Class) interfaceClass, url);
         if (withMetaData) {
             invoker = new DelegateProviderMetaDataInvoker(invoker, this);
         }
+        // 使用协议导出调用对象 export @org.apache.dubbo.rpc.Protocol$Adaptive
         Exporter<?> exporter = protocolSPI.export(invoker);
         exporters.add(exporter);
     }
