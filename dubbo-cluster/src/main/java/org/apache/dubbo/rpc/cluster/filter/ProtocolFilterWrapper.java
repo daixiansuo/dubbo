@@ -55,6 +55,7 @@ public class ProtocolFilterWrapper implements Protocol {
     @Override
     public <T> Exporter<T> export(Invoker<T> invoker) throws RpcException {
         // 注册中心的协议导出直接执行
+        // 服务发现service-discovery-registry的导出会走这个逻辑
         if (UrlUtils.isRegistry(invoker.getUrl())) {
             return protocol.export(invoker);
         }

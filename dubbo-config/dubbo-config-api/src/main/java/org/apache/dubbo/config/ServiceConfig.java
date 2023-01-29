@@ -215,6 +215,10 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         serviceMetadata.generateServiceKey();
     }
 
+
+    /**
+     * trigger invoke ： org.apache.dubbo.config.deploy.DefaultModuleDeployer#exportServices()
+     */
     @Override
     public void export() {
         if (this.exported) {
@@ -410,6 +414,8 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         // 这里后面详细说下 服务双注册  dubbo.application.register-mode
         List<URL> registryURLs = ConfigValidationUtils.loadRegistries(this, true);
 
+        // 当配置多个 <dubbo:protocol/> 时，即多协议暴露。 示例：<dubbo:protocol name="dubbo" port="-1"/> <dubbo:protocol name="rest" port="-1"/>
+        // TODO: dubbo-demo-xml 模块 provider 配置多个 protocol 协议，启动观察 注册数据、元数据！
         for (ProtocolConfig protocolConfig : protocols) {
             String pathKey = URL.buildKey(getContextPath(protocolConfig)
                 .map(p -> p + "/" + path)
@@ -443,6 +449,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         // 协议配置 + 默认协议配置转URL类型的配置存储
         URL url = buildUrl(protocolConfig, map);
         // 导出 url
+        // eg: dubbo://192.168.1.9:20880/link.elastic.dubbo.entity.DemoService?anyhost=true&application=dubbo-demo-api-provider&background=false&bind.ip=192.168.1.9&bind.port=20880&deprecated=false&dubbo=2.0.2&dynamic=true&generic=false&interface=link.elastic.dubbo.entity.DemoService&methods=sayHello,sayHelloAsync&pid=10953&release=3.0.8&side=provider&timestamp=1653705630518
         exportUrl(url, registryURLs);
     }
 
@@ -666,6 +673,8 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
     private URL exportRemote(URL url, List<URL> registryURLs) {
         if (CollectionUtils.isNotEmpty(registryURLs)) {
             for (URL registryURL : registryURLs) {
+
+                // 为协议URL 添加应用级注册service-discovery-registry参数service-name-mapping为true
                 if (SERVICE_REGISTRY_PROTOCOL.equals(registryURL.getProtocol())) {
                     url = url.addParameterIfAbsent(SERVICE_NAME_MAPPING_KEY, "true");
                 }
@@ -675,7 +684,9 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                     continue;
                 }
 
+                // 为协议url 添加动态配置dynamic
                 url = url.addParameterIfAbsent(DYNAMIC_KEY, registryURL.getParameter(DYNAMIC_KEY));
+                // 监控配置暂时为null
                 URL monitorUrl = ConfigValidationUtils.loadMonitor(this, registryURL);
                 if (monitorUrl != null) {
                     url = url.putAttribute(MONITOR_KEY, monitorUrl);
@@ -695,6 +706,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                     }
                 }
 
+                // 此时传入的 url 为 registryURL ！！！ providerUrl 通过 registryURL 的 attribute 属性传递， 即 export
                 doExportUrl(registryURL.putAttribute(EXPORT_KEY, url), true);
             }
 

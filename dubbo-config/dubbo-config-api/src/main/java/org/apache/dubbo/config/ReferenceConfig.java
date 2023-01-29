@@ -609,8 +609,10 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void createInvokerForRemote() {
+        // 这个url 为注册协议 如registry://127.0.0.1:2181/org.apache.dubbo.registry.RegistryService?application=dubbo-demo-api-consumer&dubbo=2.0.2&pid=6204&qos.enable=false&qos.port=-1&registry=zookeeper&release=3.0.9&timestamp=1657439419495
         if (urls.size() == 1) {
             URL curUrl = urls.get(0);
+            // 这个SPI对象是由字节码动态生成的自适应对象Protocol$Adaptie直接看看不到源码，后续可以解析一个字节码生成的类型，这里后续来调用链路即可
             invoker = protocolSPI.refer(interfaceClass, curUrl);
             // registry url, mesh-enable and unloadClusterRelated is true, not need Cluster.
             if (!UrlUtils.isRegistry(curUrl) &&
