@@ -179,16 +179,20 @@ public class MetadataInfo implements Serializable {
 
         updated = false;
 
+        //应用下没有服务则使用一个空的版本号
         if (CollectionUtils.isEmptyMap(services)) {
             this.revision = EMPTY_REVISION;
         } else {
             StringBuilder sb = new StringBuilder();
+            // app是应用名
             sb.append(app);
             for (Map.Entry<String, ServiceInfo> entry : new TreeMap<>(services).entrySet()) {
                 sb.append(entry.getValue().toDescString());
             }
+            // 计算生成 md5
             String tempRevision = RevisionResolver.calRevision(sb.toString());
             if (!StringUtils.isEquals(this.revision, tempRevision)) {
+                // 元数据重新注册的话我们可以看看这个日志metadata revision change
                 if (logger.isInfoEnabled()) {
                     logger.info(String.format("metadata revision changed: %s -> %s, app: %s, services: %d", this.revision, tempRevision, this.app, this.services.size()));
                 }

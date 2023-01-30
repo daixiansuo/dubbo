@@ -77,8 +77,10 @@ public class ConfigurableMetadataServiceExporter {
 
     public synchronized ConfigurableMetadataServiceExporter export() {
         if (serviceConfig == null || !isExported()) {
+            // 构建 元数据服务配置
             this.serviceConfig = buildServiceConfig();
             // export
+            // 服务导出
             serviceConfig.export();
             metadataService.setMetadataURL(serviceConfig.getExportedUrls().get(0));
             if (logger.isInfoEnabled()) {
@@ -272,15 +274,21 @@ public class ConfigurableMetadataServiceExporter {
         RegistryConfig registryConfig = new RegistryConfig("N/A");
         registryConfig.setId("internal-metadata-registry");
         serviceConfig.setRegistry(registryConfig);
+        // 注册中心的配置register设置为了false 则为不向注册中心注册具体的服务配置信息
         serviceConfig.setRegister(false);
+        // 生成协议配置 ，这里会配置一下元数据使用的服务端口号 默认使用其他服务的端口20880
         serviceConfig.setProtocol(generateMetadataProtocol());
         serviceConfig.setInterface(MetadataService.class);
         serviceConfig.setDelay(0);
+        // 这里也是需要注意的地方服务引用的类型为MetadataServiceDelegation
         serviceConfig.setRef(metadataService);
         serviceConfig.setGroup(applicationConfig.getName());
         serviceConfig.setVersion(MetadataService.VERSION);
+        // 生成方法配置 这里目前提供的服务方法为getAndListenInstanceMetadata方法 后续可以看下这个方法的视线
         serviceConfig.setMethods(generateMethodConfig());
+        // 对每个提供者的最大连接数connections为1
         serviceConfig.setConnections(1); // separate connection
+        // 服务提供者每服务每方法最大可并行执行请求数executes为100
         serviceConfig.setExecutes(100); // max tasks running at the same time
         Map<String, String> threadParams = new HashMap<>();
         threadParams.put(THREADPOOL_KEY, "cached");

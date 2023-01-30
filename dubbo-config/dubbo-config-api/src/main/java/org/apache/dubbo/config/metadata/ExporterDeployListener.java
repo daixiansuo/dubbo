@@ -63,11 +63,15 @@ public class ExporterDeployListener implements ApplicationDeployListener, Priori
     @Override
     public synchronized void onModuleStarted(ApplicationModel applicationModel) {
         // start metadata service exporter
+        // MetadataServiceDelegation 类型为实现提供远程RPC服务以方便元数据信息的查询功能的类型。
         MetadataServiceDelegation metadataService = applicationModel.getBeanFactory().getOrRegisterBean(MetadataServiceDelegation.class);
         if (metadataServiceExporter == null) {
             metadataServiceExporter = new ConfigurableMetadataServiceExporter(applicationModel, metadataService);
             // fixme, let's disable local metadata service export at this moment
+            // 默认我们是没有配置这个元数据类型的这里元数据类型默认为local， 条件是：不是remote则开始导出，
+            // 在前面的博客<<Dubbo启动器DubboBootstrap添加应用程序的配置信息ApplicationConfig>> 中有提到这个配置下面我再说下
             if (!REMOTE_METADATA_STORAGE_TYPE.equals(getMetadataType(applicationModel))) {
+                // 服务导出 ！！！
                 metadataServiceExporter.export();
             }
         }

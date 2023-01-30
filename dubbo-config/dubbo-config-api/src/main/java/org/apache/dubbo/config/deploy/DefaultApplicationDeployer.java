@@ -157,6 +157,9 @@ public class DefaultApplicationDeployer extends AbstractDeployer<ApplicationMode
     /**
      * Close registration of instance for pure Consumer process by setting registerConsumer to 'false'
      * by default is true.
+     *
+     * 用于控制是否将实例注册到注册表。仅当实例是 纯消费者 时才设置为“false”。
+     *
      */
     private boolean isRegisterConsumerInstance() {
         Boolean registerConsumer = getApplication().getRegisterConsumer();
@@ -610,11 +613,16 @@ public class DefaultApplicationDeployer extends AbstractDeployer<ApplicationMode
 
     @Override
     public void prepareApplicationInstance() {
+        // 已经注册过应用实例数据了 直接返回 （下面CAS逻辑判断了）
         if (hasPreparedApplicationInstance.get()) {
             return;
         }
 
+        // 注册开关控制 默认为true
+        // 通过将 registerConsumer 默认设置为“false”来 关闭纯使用者进程实例的注册。
+        // TODO： 用于控制是否将实例注册到注册表。仅当实例是 "纯消费者" 时才设置为“false”。
         if (isRegisterConsumerInstance()) {
+            // 导出元数据服务
             exportMetadataService();
             if (hasPreparedApplicationInstance.compareAndSet(false, true)) {
                 // register the local ServiceInstance if required
@@ -722,15 +730,21 @@ public class DefaultApplicationDeployer extends AbstractDeployer<ApplicationMode
 
     private volatile boolean registered;
 
+
+    /**
+     * 这个方法先将 应用元数据注册到注册中心，然后 开始开启定时器每隔30秒同步一次元数据向注册中心。
+     */
     private void registerServiceInstance() {
         try {
             registered = true;
+            // 向注册中心 注册应用元数据
             ServiceInstanceMetadataUtils.registerMetadataAndInstance(applicationModel);
         } catch (Exception e) {
             logger.error(CONFIG_REGISTER_INSTANCE_ERROR, "configuration server disconnected", "", "Register instance error.", e);
         }
         if (registered) {
             // scheduled task for updating Metadata and ServiceInstance
+            // 开始定时器 每隔30秒 同步一次元数据向注册中心
             asyncMetadataFuture = frameworkExecutorRepository.getSharedScheduledExecutor().scheduleWithFixedDelay(() -> {
 
                 // ignore refresh metadata on stopping
@@ -814,9 +828,12 @@ public class DefaultApplicationDeployer extends AbstractDeployer<ApplicationMode
 
     @Override
     public void notifyModuleChanged(ModuleModel moduleModel, DeployState state) {
+
+        // 根据所有模块的状态来判断应用发布器的状态
         checkState(moduleModel, state);
 
         // notify module state changed or module changed
+        // 通知所有模块状态更新
         synchronized (stateLock) {
             stateLock.notifyAll();
         }
@@ -825,9 +842,12 @@ public class DefaultApplicationDeployer extends AbstractDeployer<ApplicationMode
     @Override
     public void checkState(ModuleModel moduleModel, DeployState moduleState) {
         synchronized (stateLock) {
+            // 非内部模块，并且模块的状态是发布成功了
             if (!moduleModel.isInternal() && moduleState == DeployState.STARTED) {
+                // 准备发布元数据信息和应用实例信息
                 prepareApplicationInstance();
             }
+            // 应用下所有模块状态进行汇总计算
             DeployState newState = calculateState();
             switch (newState) {
                 case STARTED:
@@ -922,9 +942,13 @@ public class DefaultApplicationDeployer extends AbstractDeployer<ApplicationMode
         if (!isStarting()) {
             return;
         }
+
+        // 这里监听器我们主要关注的类型是 ExporterDeployListener 类型
         for (DeployListener<ApplicationModel> listener : listeners) {
             try {
                 if (listener instanceof ApplicationDeployListener) {
+                    // 回调监听器的模块启动成功方法
+                    // invoke：org.apache.dubbo.config.metadata.ExporterDeployListener.onModuleStarted
                     ((ApplicationDeployListener) listener).onModuleStarted(applicationModel);
                 }
             } catch (Throwable e) {

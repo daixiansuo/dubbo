@@ -258,9 +258,12 @@ public class DefaultModuleDeployer extends AbstractDeployer<ModuleModel> impleme
 
     private void onModuleStarted() {
         try {
+            // 状态判断是否为启动中如果是则将状态设置为STARTED
             if (isStarting()) {
+                // 先修改状态
                 setStarted();
                 logger.info(getIdentifier() + " has started.");
+                // 状态修改成功之后，通知   "应用程序发布器模块（DefaultApplicationDeployer）"  发布器启动成功了
                 applicationDeployer.notifyModuleChanged(moduleModel, DeployState.STARTED);
             }
         } finally {

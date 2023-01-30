@@ -201,6 +201,8 @@ public class ServiceInstanceMetadataUtils {
         LOGGER.info("Start registering instance address to registry.");
         RegistryManager registryManager = applicationModel.getBeanFactory().getBean(RegistryManager.class);
         // register service instance
+        // 注意这里服务发现的类型只有 ServiceDiscoveryRegistry类型的注册协议才满足
+        // registryManager.getServiceDiscoveries().forEach(ServiceDiscovery::register);
         registryManager.getServiceDiscoveries().forEach(ServiceDiscovery::register);
     }
 

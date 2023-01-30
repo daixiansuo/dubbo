@@ -93,20 +93,31 @@ public abstract class AbstractServiceDiscovery implements ServiceDiscovery {
     }
 
 
+    /**
+     * 模块发布器(DefaultModuleDeployer) 启动成功之后，通知 应用发布器(DefaultApplicationDeployer)，
+     * 应用发布器 发布元数据信息和  应用实例信息（registerServiceInstance）
+     * trigger invoke: org.apache.dubbo.config.deploy.DefaultApplicationDeployer#registerServiceInstance()
+     *
+     * @throws RuntimeException
+     */
     @Override
     public synchronized void register() throws RuntimeException {
         if (isDestroy) {
             return;
         }
+        // 创建应用的实例信息 等待下面注册到注册中心
         this.serviceInstance = createServiceInstance(this.metadataInfo);
         if (!isValidInstance(this.serviceInstance)) {
             logger.warn(REGISTRY_FAILED_FETCH_INSTANCE, "", "", "No valid instance found, stop registering instance address to registry.");
             return;
         }
 
+        // 是否需要更新
         boolean revisionUpdated = calOrUpdateInstanceRevision(this.serviceInstance);
         if (revisionUpdated) {
+            // 元数据注册
             reportMetadata(this.metadataInfo);
+            // 应用的实例信息注册到注册中心之上
             doRegister(this.serviceInstance);
         }
     }
@@ -273,16 +284,23 @@ public abstract class AbstractServiceDiscovery implements ServiceDiscovery {
     protected ServiceInstance createServiceInstance(MetadataInfo metadataInfo) {
         DefaultServiceInstance instance = new DefaultServiceInstance(serviceName, applicationModel);
         instance.setServiceMetadata(metadataInfo);
+        // metadataType的值为local 这个方法是将元数据类型存储到应用的元数据对象中 对应内容为dubbo.metadata.storage-type:local
         setMetadataStorageType(instance, metadataType);
+        // 这个是自定义元数据数据 我们也可以通过实现扩展ServiceInstanceCustomizer来自定义一些元数据
         ServiceInstanceMetadataUtils.customizeInstance(instance, applicationModel);
         return instance;
     }
 
     protected boolean calOrUpdateInstanceRevision(ServiceInstance instance) {
+        // 获取元数据版本号对应字段dubbo.metadata.revision
         String existingInstanceRevision = getExportedServicesRevision(instance);
+        //获取实例的服务元数据信息：metadata{app='dubbo-demo-api-provider',revision='null',size=1,services=[link.elastic.dubbo.entity.DemoService:dubbo]}
         MetadataInfo metadataInfo = instance.getServiceMetadata();
+        // 必须在不同线程之间同步计算此实例的状态，如同一实例的修订和修改。此方法的使用仅限于某些点，例如在注册期间。始终尝试使用此选项。改为getRevision（）。
         String newRevision = metadataInfo.calAndGetRevision();
+        // 版本号发生了变更（元数据发生了变更）版本号是md5元数据信息计算出来HASH验证
         if (!newRevision.equals(existingInstanceRevision)) {
+            // 版本号添加到dubbo.metadata.revision字段中
             instance.getMetadata().put(EXPORTED_SERVICES_REVISION_PROPERTY_NAME, metadataInfo.getRevision());
             return true;
         }
@@ -291,7 +309,9 @@ public abstract class AbstractServiceDiscovery implements ServiceDiscovery {
 
     protected void reportMetadata(MetadataInfo metadataInfo) {
         if (metadataReport != null) {
+            // 订阅元数据的标识符
             SubscriberMetadataIdentifier identifier = new SubscriberMetadataIdentifier(serviceName, metadataInfo.getRevision());
+            // 是否远程发布元数据，这里我们是本地注册这个就不会在元数据中心发布这个元数据信息
             if ((DEFAULT_METADATA_STORAGE_TYPE.equals(metadataType) && metadataReport.shouldReportMetadata()) || REMOTE_METADATA_STORAGE_TYPE.equals(metadataType)) {
                 metadataReport.publishAppMetadata(identifier, metadataInfo);
             }
