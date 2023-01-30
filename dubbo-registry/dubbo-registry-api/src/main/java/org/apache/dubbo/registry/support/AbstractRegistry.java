@@ -419,6 +419,8 @@ public abstract class AbstractRegistry implements Registry {
         if (logger.isInfoEnabled()) {
             logger.info("Subscribe: " + url);
         }
+
+        // ConcurrentMap<URL, Set<NotifyListener>> subscribed集合用来记录消费者对应的通知监听器
         Set<NotifyListener> listeners = subscribed.computeIfAbsent(url, n -> new ConcurrentHashSet<>());
         listeners.add(listener);
     }

@@ -58,7 +58,10 @@ public class ListenerRegistryWrapper implements Registry {
     @Override
     public void register(URL url) {
         try {
+            // 这个registry类型为ZookeeperRegistry
+            // ZookeeperRegistry 类没有 register 方法，调用的是其 父类型 FailbackRegistry 的register方法
             if (registry != null) {
+                //
                 registry.register(url);
             }
         } finally {
@@ -84,6 +87,9 @@ public class ListenerRegistryWrapper implements Registry {
     @Override
     public void subscribe(URL url, NotifyListener listener) {
         try {
+
+            // 这个registry类型为ZookeeperRegistry
+            // ZookeeperRegistry 类没有 subscribe 方法，调用的是其 父类型 FailbackRegistry 的 subscribe 方法
             if (registry != null) {
                 registry.subscribe(url, listener);
             }

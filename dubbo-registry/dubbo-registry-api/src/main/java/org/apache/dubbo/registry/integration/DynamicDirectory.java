@@ -128,7 +128,9 @@ public abstract class DynamicDirectory<T> extends AbstractDirectory<T> implement
 
         ModuleModel moduleModel = url.getOrDefaultModuleModel();
 
+        // 容错适配器，Cluster$Adaptive 默认的容错机制是失效转移 failover
         this.cluster = moduleModel.getExtensionLoader(Cluster.class).getAdaptiveExtension();
+        // 路由工厂适配器RouterFactory$Adaptive
         this.routerFactory = moduleModel.getExtensionLoader(RouterFactory.class).getAdaptiveExtension();
 
         if (serviceType == null) {
@@ -142,13 +144,16 @@ public abstract class DynamicDirectory<T> extends AbstractDirectory<T> implement
         this.shouldRegister = !ANY_VALUE.equals(url.getServiceInterface()) && url.getParameter(REGISTER_KEY, true);
         this.shouldSimplified = url.getParameter(SIMPLIFIED_KEY, false);
 
+        // 这里对应我们的例子中的服务类型 为：link.elastic.dubbo.entity.DemoService
         this.serviceType = serviceType;
+        // 服务没有分组和版本 默认的key是服务信息 ：link.elastic.dubbo.entity.DemoService
         this.serviceKey = super.getConsumerUrl().getServiceKey();
 
         this.directoryUrl = consumerUrl;
         String group = directoryUrl.getGroup("");
         this.multiGroup = group != null && (ANY_VALUE.equals(group) || group.contains(","));
 
+        // 服务目录信息为空是否快速失败 默认为true
         this.shouldFailFast = Boolean.parseBoolean(ConfigurationUtils.getProperty(moduleModel, Constants.SHOULD_FAIL_FAST_KEY, "true"));
     }
 
@@ -180,6 +185,7 @@ public abstract class DynamicDirectory<T> extends AbstractDirectory<T> implement
 
     public void subscribe(URL url) {
         setSubscribeUrl(url);
+        // invoke： org.apache.dubbo.registry.ListenerRegistryWrapper.subscribe
         registry.subscribe(url, this);
     }
 

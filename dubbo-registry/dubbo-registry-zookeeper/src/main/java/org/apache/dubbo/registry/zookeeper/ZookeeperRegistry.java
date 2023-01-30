@@ -157,6 +157,7 @@ public class ZookeeperRegistry extends CacheableFailbackRegistry {
     public void doRegister(URL url) {
         try {
             checkDestroyed();
+            // 写入消费者路径 /dubbo/服务接口/consumers/消费者配置url  第二个参数是否为临时节点默认是的，如果动态配置为false就会是持久节点了
             zkClient.create(toUrlPath(url), url.getParameter(DYNAMIC_KEY, true), false);
         } catch (Throwable e) {
             throw new RpcException("Failed to register " + url + " to zookeeper " + getUrl() + ", cause: " + e.getMessage(), e);

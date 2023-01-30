@@ -594,10 +594,13 @@ public class RegistryProtocol implements Protocol, ScopeModelAware {
     }
 
     protected <T> ClusterInvoker<T> doCreateInvoker(DynamicDirectory<T> directory, Cluster cluster, Registry registry, Class<T> type) {
+        // 初始化服务目录 为其设置 当前类型的的注册中心和协议
         directory.setRegistry(registry);
         directory.setProtocol(protocol);
         // all attributes of REFER_KEY
         Map<String, String> parameters = new HashMap<>(directory.getConsumerUrl().getParameters());
+
+        // 消费者配置转ServiceConfigURL
         URL urlToRegistry = new ServiceConfigURL(
             parameters.get(PROTOCOL_KEY) == null ? CONSUMER : parameters.get(PROTOCOL_KEY),
             parameters.remove(REGISTER_IP_KEY),
@@ -609,12 +612,18 @@ public class RegistryProtocol implements Protocol, ScopeModelAware {
         urlToRegistry = urlToRegistry.setServiceModel(directory.getConsumerUrl().getServiceModel());
         if (directory.isShouldRegister()) {
             directory.setRegisteredConsumerUrl(urlToRegistry);
+            //TODO: 这一行代码是将 服务消费者 的配置信息注册到注册中心的逻辑 ListenerRegistryWrapper.register
             registry.register(directory.getRegisteredConsumerUrl());
         }
+
+        // 这一行代码是用来创建路由链的
         directory.buildRouterChain(urlToRegistry);
-        // TODO： 写入到注册中心 （订阅）
+        // TODO： 服务发现并订阅的逻辑 （org.apache.dubbo.registry.integration.RegistryDirectory.subscribe）
+        // toSubscribeUrl(urlToRegistry) 方法 添加 providers,configurators,routers
         directory.subscribe(toSubscribeUrl(urlToRegistry));
 
+        // cluster类型为 MockClusterWrapper 包装了 FailoverCluster
+        // 这个是处理调用链路的 最前面的调用是容错然后回加上失效转移，过滤器负载均衡等等invoker执行的时候按顺序执行
         return (ClusterInvoker<T>) cluster.join(directory, true);
     }
 

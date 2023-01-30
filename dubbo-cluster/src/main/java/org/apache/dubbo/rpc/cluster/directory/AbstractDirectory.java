@@ -138,9 +138,12 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
             throw new IllegalArgumentException("url == null");
         }
 
+        //删除 refer、monitor 属性
         this.url = url.removeAttribute(REFER_KEY).removeAttribute(MONITOR_KEY);
 
         Map<String, String> queryMap;
+        //  TODO：删除之后 再获取 ？？
+        //  注册中心中引用URL的关键字名称 这个查询到的是服务引用的一些配置信息
         Object referParams = url.getAttribute(REFER_KEY);
         if (referParams instanceof Map) {
             queryMap = (Map<String, String>) referParams;
@@ -170,11 +173,20 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
             this.consumerUrl = consumerUrlFrom.addParameters(queryMap);
         }
 
+        // 用于检查连接的线程池 核心线程数为CPU核心数，线程的名字为：Dubbo-framework-connectivity-scheduler 分析线程时候看到这个名字要知道它的用处
         this.connectivityExecutor = applicationModel.getFrameworkModel().getBeanFactory()
             .getBean(FrameworkExecutorRepository.class).getConnectivityScheduledExecutor();
+        // 获取全局配置，全局配置就是配置信息
         Configuration configuration = ConfigurationUtils.getGlobalConfiguration(url.getOrDefaultModuleModel());
+
+        // 选择尝试重新连接的每个重新连接任务的最大调用程序数。 默认为10
+        // 从invokersToReconnect中选取调用程序限制最大重新连接任务TryCount，防止此任务长时间挂起所有ConnectionExecutor
         this.reconnectTaskTryCount = configuration.getInt(RECONNECT_TASK_TRY_COUNT, DEFAULT_RECONNECT_TASK_TRY_COUNT);
+
+        // 重连线程池两次触发重连任务的间隔时间，默认1000毫秒 重新连接任务的时间段（如果需要）。（单位：毫秒）
         this.reconnectTaskPeriod = configuration.getInt(RECONNECT_TASK_PERIOD, DEFAULT_RECONNECT_TASK_PERIOD);
+
+        // 路由调用链
         setRouterChain(routerChain);
     }
 

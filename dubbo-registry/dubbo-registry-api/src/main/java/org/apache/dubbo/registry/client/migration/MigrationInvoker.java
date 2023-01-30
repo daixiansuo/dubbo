@@ -465,6 +465,7 @@ public class MigrationInvoker<T> implements MigrationClusterInvoker<T> {
             }
 
             // 创建 接口级别 Invoker，并注册到 注册中心
+            // 这个registryProtocol类型为InterfaceCompatibleRegistryProtocol
             invoker = registryProtocol.getInvoker(cluster, registry, type, url);
         }
         setListener(invoker, () -> {
