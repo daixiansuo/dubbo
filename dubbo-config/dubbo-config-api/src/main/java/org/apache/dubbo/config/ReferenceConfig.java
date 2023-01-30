@@ -223,8 +223,15 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
             throw new IllegalStateException("The invoker of ReferenceConfig(" + url + ") has already destroyed!");
         }
 
+        // ref类型为 transient volatile T ref;
         if (ref == null) {
             // ensure start module, compatible with old api usage
+            /**
+             *  这个前面已经调用了模块发布器启动过了，这里有这么一行代码是有一定作用的，
+             *  如果使用方直接调用了ReferenceConfigBase的get方法或者缓存对象SimpleReferenceCache类型的
+             *  对象的get方法来引用服务端的时候就会造成很多配置没有初始化下面执行逻辑的时候出现问题，
+             *  这个代码其实就是启动模块进行一些基础配置的初始化操作 比如元数据中心默认配置选择，注册中心默认配置选择这些都是比较重要的
+             */
             getScopeModel().getDeployer().start();
 
             synchronized (this) {
@@ -264,41 +271,54 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
             return;
         }
         try {
+            // 刷新配置
             if (!this.isRefreshed()) {
                 this.refresh();
             }
 
             // init serviceMetadata
+            // 初始化ServiceMetadata类型对象serviceMetadata 为其设置服务基本属性比如版本号，分组，服务接口名
             initServiceMetadata(consumer);
-
+            // 继续初始化元数据信息 服务接口类型和key
             serviceMetadata.setServiceType(getServiceInterfaceClass());
             // TODO, uncomment this line once service key is unified
             serviceMetadata.generateServiceKey();
 
+            // 配置转Map类型
             Map<String, String> referenceParameters = appendConfig();
             // init service-application mapping
+            // 来自本地存储和url参数的初始化映射。 参数转URL配置初始化 Dubbo中喜欢用url作为配置的一种处理方式
             initServiceAppsMapping(referenceParameters);
 
+            // 本地内存模块服务存储库
             ModuleServiceRepository repository = getScopeModel().getServiceRepository();
             ServiceDescriptor serviceDescriptor;
+            // ServiceModel和ServiceMetadata在某种程度上是相互重复的。我们将来应该合并它们。
             if (CommonConstants.NATIVE_STUB.equals(getProxy())) {
                 serviceDescriptor = StubSuppliers.getServiceDescriptor(interfaceName);
                 repository.registerService(serviceDescriptor);
             } else {
+                // 本地存储库注册服务接口类型
                 serviceDescriptor = repository.registerService(interfaceClass);
             }
+
+            // 消费者模型对象
             consumerModel = new ConsumerModel(serviceMetadata.getServiceKey(), proxy, serviceDescriptor,
-                    getScopeModel(), serviceMetadata, createAsyncMethodInfo(), interfaceClassLoader);
+                getScopeModel(), serviceMetadata, createAsyncMethodInfo(), interfaceClassLoader);
 
             // Compatible with dependencies on ServiceModel#getReferenceConfig() , and will be removed in a future version.
             consumerModel.setConfig(this);
 
+            // 本地存储库注册消费者模型对象
             repository.registerConsumer(consumerModel);
 
+            // 与前面代码一样基础初始化服务元数据对象为其设置附加参数
             serviceMetadata.getAttachments().putAll(referenceParameters);
 
+            // 创建服务的代理对象 ！！！核心代码在这里
             ref = createProxy(referenceParameters);
 
+            // 为服务元数据对象设置代理对象
             serviceMetadata.setTarget(ref);
             serviceMetadata.addAttribute(PROXY_CLASS_REF, ref);
 
@@ -306,6 +326,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
             consumerModel.setProxyObject(ref);
             consumerModel.initMethodModels();
 
+            // 检查invoker对象初始结果
             checkInvokerAvailable();
         } catch (Throwable t) {
             try {
@@ -406,7 +427,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
             hostToRegistry = NetUtils.getLocalHost();
         } else if (isInvalidLocalHost(hostToRegistry)) {
             throw new IllegalArgumentException(
-                    "Specified invalid registry ip from property:" + DUBBO_IP_TO_REGISTRY + ", value:" + hostToRegistry);
+                "Specified invalid registry ip from property:" + DUBBO_IP_TO_REGISTRY + ", value:" + hostToRegistry);
         }
 
         map.put(REGISTER_IP_KEY, hostToRegistry);
@@ -429,6 +450,8 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
 
     @SuppressWarnings({"unchecked"})
     private T createProxy(Map<String, String> referenceParameters) {
+
+        // 本地引用 这里为false
         if (shouldJvmRefer(referenceParameters)) {
             createInvokerForLocal(referenceParameters);
         } else {
@@ -438,26 +461,34 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
 
             if (StringUtils.isNotEmpty(url)) {
                 // user specified URL, could be peer-to-peer address, or register center's address.
+                // url存在则为点对点引用
                 parseUrl(referenceParameters);
             } else {
                 // if protocols not in jvm checkRegistry
+                // 这里不是local协议 默认这里为空
                 if (!LOCAL_PROTOCOL.equalsIgnoreCase(getProtocol())) {
+                    // 从注册表中获取URL并将其聚合。这个其实就是初始化一下注册中心的url配置
+                    // TODO： 这里需要注意，此处会讲 registryUrl 添加到 urls 中，referenceParameters 参数通过 属性 refer 放到 registryUrl 中的 attributes.
                     aggregateUrlFromRegistry(referenceParameters);
                 }
             }
+
+            // 这个代码非常重要 创建远程引用，创建远程引用调用器
             createInvokerForRemote();
         }
 
         if (logger.isInfoEnabled()) {
             logger.info("Referred dubbo service: [" + referenceParameters.get(INTERFACE_KEY) + "]." +
-                    (Boolean.parseBoolean(referenceParameters.get(GENERIC_KEY)) ?
-                            " it's GenericService reference" : " it's not GenericService reference"));
+                (Boolean.parseBoolean(referenceParameters.get(GENERIC_KEY)) ?
+                    " it's GenericService reference" : " it's not GenericService reference"));
         }
 
         URL consumerUrl = new ServiceConfigURL(CONSUMER_PROTOCOL, referenceParameters.get(REGISTER_IP_KEY), 0,
-                referenceParameters.get(INTERFACE_KEY), referenceParameters);
+            referenceParameters.get(INTERFACE_KEY), referenceParameters);
         consumerUrl = consumerUrl.setScopeModel(getScopeModel());
         consumerUrl = consumerUrl.setServiceModel(consumerModel);
+
+        // TODO: 发布元数据 至注册中心
         MetadataUtils.publishServiceDefinition(consumerUrl, consumerModel.getServiceModel(), getApplicationModel());
 
         // create service proxy
@@ -489,7 +520,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
             if (StringUtils.isEmpty(System.getenv("POD_NAMESPACE"))) {
                 if (logger.isWarnEnabled()) {
                     logger.warn(CONFIG_FAILED_LOAD_ENV_VARIABLE, "", "", "Can not get env variable: POD_NAMESPACE, it may not be running in the K8S environment , " +
-                            "finally use 'default' replace.");
+                        "finally use 'default' replace.");
                 }
                 podNamespace = "default";
             } else {
@@ -523,7 +554,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
         }
 
         getScopeModel().getConfigManager().getProtocol(TRIPLE)
-                .orElseThrow(() -> new IllegalStateException("In mesh mode, a triple protocol must be specified"));
+            .orElseThrow(() -> new IllegalStateException("In mesh mode, a triple protocol must be specified"));
 
         String providedBy = referenceParameters.get(PROVIDED_BY);
         if (StringUtils.isEmpty(providedBy)) {
@@ -597,9 +628,9 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
         }
         if (urls.isEmpty()) {
             throw new IllegalStateException(
-                    "No such any registry to reference " + interfaceName + " on the consumer " + NetUtils.getLocalHost() +
-                            " use dubbo version " + Version.getVersion() +
-                            ", please config <dubbo:registry address=\"...\" /> to your spring config.");
+                "No such any registry to reference " + interfaceName + " on the consumer " + NetUtils.getLocalHost() +
+                    " use dubbo version " + Version.getVersion() +
+                    ", please config <dubbo:registry address=\"...\" /> to your spring config.");
         }
     }
 
@@ -616,7 +647,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
             invoker = protocolSPI.refer(interfaceClass, curUrl);
             // registry url, mesh-enable and unloadClusterRelated is true, not need Cluster.
             if (!UrlUtils.isRegistry(curUrl) &&
-                    !curUrl.getParameter(UNLOAD_CLUSTER_RELATED, false)) {
+                !curUrl.getParameter(UNLOAD_CLUSTER_RELATED, false)) {
                 List<Invoker<?>> invokers = new ArrayList<>();
                 invokers.add(invoker);
                 invoker = Cluster.getCluster(scopeModel, Cluster.DEFAULT).join(new StaticDirectory(curUrl, invokers), true);
@@ -659,15 +690,15 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
             // 2-2 - No provider available.
 
             IllegalStateException illegalStateException = new IllegalStateException("Failed to check the status of the service "
-                    + interfaceName
-                    + ". No provider available for the service "
-                    + (group == null ? "" : group + "/")
-                    + interfaceName +
-                    (version == null ? "" : ":" + version)
-                    + " from the url "
-                    + invoker.getUrl()
-                    + " to the consumer "
-                    + NetUtils.getLocalHost() + " use dubbo version " + Version.getVersion());
+                + interfaceName
+                + ". No provider available for the service "
+                + (group == null ? "" : group + "/")
+                + interfaceName +
+                (version == null ? "" : ":" + version)
+                + " from the url "
+                + invoker.getUrl()
+                + " to the consumer "
+                + NetUtils.getLocalHost() + " use dubbo version " + Version.getVersion());
 
             logger.error(CLUSTER_NO_VALID_PROVIDER, "provider not started", "", "No provider available.", illegalStateException);
 
@@ -689,7 +720,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
 
         // init some null configuration.
         List<ConfigInitializer> configInitializers = this.getExtensionLoader(ConfigInitializer.class)
-                .getActivateExtension(URL.valueOf("configInitializer://"), (String[]) null);
+            .getActivateExtension(URL.valueOf("configInitializer://"), (String[]) null);
         configInitializers.forEach(e -> e.initReferConfig(this));
 
         if (getGeneric() == null && getConsumer() != null) {
@@ -709,7 +740,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
                     interfaceClass = Class.forName(interfaceName, true, getInterfaceClassLoader());
                 } else if (interfaceClass == null) {
                     interfaceClass = Class.forName(interfaceName, true, Thread.currentThread()
-                            .getContextClassLoader());
+                        .getContextClassLoader());
                 }
             } catch (ClassNotFoundException e) {
                 throw new IllegalStateException(e.getMessage(), e);
@@ -766,7 +797,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
 
     private void postProcessConfig() {
         List<ConfigPostProcessor> configPostProcessors = this.getExtensionLoader(ConfigPostProcessor.class)
-                .getActivateExtension(URL.valueOf("configPostProcessor://"), (String[]) null);
+            .getActivateExtension(URL.valueOf("configPostProcessor://"), (String[]) null);
         configPostProcessors.forEach(component -> component.postProcessReferConfig(this));
     }
 

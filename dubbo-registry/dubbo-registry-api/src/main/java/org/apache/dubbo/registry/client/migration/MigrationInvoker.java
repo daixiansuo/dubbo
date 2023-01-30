@@ -241,11 +241,14 @@ public class MigrationInvoker<T> implements MigrationClusterInvoker<T> {
     @Override
     public void migrateToApplicationFirstInvoker(MigrationRule newRule) {
         CountDownLatch latch = new CountDownLatch(0);
+        // 刷新接口级服务发现Invoker
         refreshInterfaceInvoker(latch);
+        // 刷新应用级服务发现Invoker类型对象
         refreshServiceDiscoveryInvoker(latch);
 
         // directly calculate preferred invoker, will not wait until address notify
         // calculation will re-occurred when address notify later
+        // 计算当前使用应用级还是接口级服务发现的Invoker对象
         calcPreferredInvoker(newRule);
     }
 
@@ -434,6 +437,8 @@ public class MigrationInvoker<T> implements MigrationClusterInvoker<T> {
             if (serviceDiscoveryInvoker != null) {
                 serviceDiscoveryInvoker.destroy();
             }
+
+            // 创建 应用级别 Invoker，并注册到 注册中心
             serviceDiscoveryInvoker = registryProtocol.getServiceDiscoveryInvoker(cluster, registry, type, url);
         }
         setListener(serviceDiscoveryInvoker, () -> {
@@ -458,6 +463,8 @@ public class MigrationInvoker<T> implements MigrationClusterInvoker<T> {
             if (invoker != null) {
                 invoker.destroy();
             }
+
+            // 创建 接口级别 Invoker，并注册到 注册中心
             invoker = registryProtocol.getInvoker(cluster, registry, type, url);
         }
         setListener(invoker, () -> {

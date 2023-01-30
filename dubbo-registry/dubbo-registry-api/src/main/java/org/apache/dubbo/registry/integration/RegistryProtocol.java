@@ -565,6 +565,7 @@ public class RegistryProtocol implements Protocol, ScopeModelAware {
      * @return The @param MigrationInvoker passed in
      */
     protected <T> Invoker<T> interceptInvoker(ClusterInvoker<T> invoker, URL url, URL consumerUrl) {
+        // 目前存在的扩展类型为RegistryProtocolListener监听器的实现类型 MigrationRuleListener
         List<RegistryProtocolListener> listeners = findRegistryProtocolListeners(url);
         if (CollectionUtils.isEmpty(listeners)) {
             return invoker;
@@ -581,6 +582,11 @@ public class RegistryProtocol implements Protocol, ScopeModelAware {
         return doCreateInvoker(directory, cluster, registry, type);
     }
 
+
+    /**
+     * TODO：trigger invoke：
+     * @see org.apache.dubbo.registry.client.migration.MigrationInvoker#refreshInterfaceInvoker(java.util.concurrent.CountDownLatch)
+     */
     public <T> ClusterInvoker<T> getInvoker(Cluster cluster, Registry registry, Class<T> type, URL url) {
         // FIXME, this method is currently not used, create the right registry before enable.
         DynamicDirectory<T> directory = new RegistryDirectory<>(type, url);
@@ -606,6 +612,7 @@ public class RegistryProtocol implements Protocol, ScopeModelAware {
             registry.register(directory.getRegisteredConsumerUrl());
         }
         directory.buildRouterChain(urlToRegistry);
+        // TODO： 写入到注册中心 （订阅）
         directory.subscribe(toSubscribeUrl(urlToRegistry));
 
         return (ClusterInvoker<T>) cluster.join(directory, true);

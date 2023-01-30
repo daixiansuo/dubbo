@@ -378,8 +378,10 @@ public class DefaultModuleDeployer extends AbstractDeployer<ModuleModel> impleme
     private void referServices() {
         configManager.getReferences().forEach(rc -> {
             try {
+                // 这个是获取配置的所有的ReferenceConfigBase类型对象
                 ReferenceConfig<?> referenceConfig = (ReferenceConfig<?>) rc;
                 if (!referenceConfig.isRefreshed()) {
+                    // 刷新引用配置
                     referenceConfig.refresh();
                 }
 
@@ -388,6 +390,7 @@ public class DefaultModuleDeployer extends AbstractDeployer<ModuleModel> impleme
                         ExecutorService executor = executorRepository.getServiceReferExecutor();
                         CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                             try {
+                                // 间接的通过缓存对象来引用服务配置
                                 referenceCache.get(rc);
                             } catch (Throwable t) {
                                 logger.error(CONFIG_FAILED_EXPORT_SERVICE, "", "", "Failed to async export service config: " + getIdentifier() + " , catch error : " + t.getMessage(), t);
@@ -396,6 +399,7 @@ public class DefaultModuleDeployer extends AbstractDeployer<ModuleModel> impleme
 
                         asyncReferringFutures.add(future);
                     } else {
+                        // 间接的通过缓存对象来引用服务配置
                         referenceCache.get(rc);
                     }
                 }
