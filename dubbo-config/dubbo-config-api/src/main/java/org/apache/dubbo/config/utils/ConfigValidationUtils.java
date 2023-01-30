@@ -260,11 +260,14 @@ public class ConfigValidationUtils {
                 } else {
                     // 正常情况下我们的配置会走这个逻辑
                     // 获取服务注册的注册模式 配置为dubbo.application.register-mode 默认值为all 既注册接口数据又注册应用级信息
+                    // 双注册模式配置查询 对应参数为dubbo.application.register-mode 默认值为all
                     registerMode = registryURL.getParameter(REGISTER_MODE_KEY, ConfigurationUtils.getCachedDynamicProperty(scopeModel, DUBBO_REGISTER_MODE_DEFAULT_KEY, DEFAULT_REGISTER_MODE_ALL));
+                    // 如果用户配置了一个错误的注册模式配置则只走接口级配置 这里默认值为interface
                     if (!isValidRegisterMode(registerMode)) {
                         registerMode = DEFAULT_REGISTER_MODE_INTERFACE;
                     }
-                    //根据逻辑条件判断是否添加应用级注册中心地址
+                    // 根据逻辑条件判断是否添加应用级注册中心地址
+                    // 这个逻辑是满足应用级注册就添加一个应用级注册的地址
                     if ((DEFAULT_REGISTER_MODE_INSTANCE.equalsIgnoreCase(registerMode) || DEFAULT_REGISTER_MODE_ALL.equalsIgnoreCase(registerMode))
                         && registryNotExists(registryURL, registryList, SERVICE_REGISTRY_PROTOCOL)) {
                         URL serviceDiscoveryRegistryURL = URLBuilder.from(registryURL)
@@ -275,6 +278,7 @@ public class ConfigValidationUtils {
                     }
 
                     // 根据逻辑条件判断是否添加接口级注册中心地址
+                    // 这个逻辑是满足接口级注册配置就添加一个接口级注册地址
                     if (DEFAULT_REGISTER_MODE_INTERFACE.equalsIgnoreCase(registerMode) || DEFAULT_REGISTER_MODE_ALL.equalsIgnoreCase(registerMode)) {
                         result.add(registryURL);
                     }

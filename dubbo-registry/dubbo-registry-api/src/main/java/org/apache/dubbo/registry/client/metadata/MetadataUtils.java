@@ -57,6 +57,7 @@ public class MetadataUtils {
     public static final ErrorTypeAwareLogger logger = LoggerFactory.getErrorTypeAwareLogger(MetadataUtils.class);
 
     public static void publishServiceDefinition(URL url, ServiceDescriptor serviceDescriptor, ApplicationModel applicationModel) {
+        // 查询是否存在元数据存储对象 对应接口MetadataReport 这里对应实现类 ZookeeperMetadataReport
         if (getMetadataReports(applicationModel).size() == 0) {
             String msg = "Remote Metadata Report Server is not provided or unavailable, will stop registering service definition to remote center!";
             logger.warn(REGISTRY_FAILED_LOAD_METADATA, "", "", msg);
@@ -65,8 +66,10 @@ public class MetadataUtils {
 
         try {
             String side = url.getSide();
+            // 服务提供者走这个逻辑
             if (PROVIDER_SIDE.equalsIgnoreCase(side)) {
                 String serviceKey = url.getServiceKey();
+                // 获取当前服务元数据信息
                 FullServiceDefinition serviceDefinition = serviceDescriptor.getFullServiceDefinition(serviceKey);
 
                 if (StringUtils.isNotEmpty(serviceKey) && serviceDefinition != null) {
@@ -77,6 +80,7 @@ public class MetadataUtils {
                             logger.info("Report of service definition is disabled for " + entry.getKey());
                             continue;
                         }
+                        // 存储服务提供者的元数据  metadataReport类型为ZookeeperMetadataReport 方法来源于父类模板方法： AbstractMetadataReport类型的storeProviderMetadata模板方法
                         metadataReport.storeProviderMetadata(
                             new MetadataIdentifier(
                                 url.getServiceInterface(),
@@ -88,6 +92,7 @@ public class MetadataUtils {
                     }
                 }
             } else {
+                // 服务消费者走这个逻辑
                 for (Map.Entry<String, MetadataReport> entry : getMetadataReports(applicationModel).entrySet()) {
                     MetadataReport metadataReport = entry.getValue();
                     if (!metadataReport.shouldReportDefinition()) {

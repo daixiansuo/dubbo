@@ -643,8 +643,11 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                         build();
                 }
 
+                // 导出至注册中心
+                // TODO： 一、应用级别的 服务发现在 RegistryProtocol#export 中的 Registry.register(url) 并没有直接 注册到注册中心，而是保存到了 内存之中的元数据信息中。
                 url = exportRemote(url, registryURLs);
                 if (!isGeneric(generic) && !getScopeModel().isInternal()) {
+                    // TODO：二、此时，就是发布元数据 至注册中心 ！！！
                     MetadataUtils.publishServiceDefinition(url, providerModel.getServiceModel(), getApplicationModel());
                 }
 

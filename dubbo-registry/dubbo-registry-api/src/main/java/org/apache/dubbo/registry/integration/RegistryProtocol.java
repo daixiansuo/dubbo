@@ -244,6 +244,7 @@ public class RegistryProtocol implements Protocol, ScopeModelAware {
 
         // url to registry
         // 通过URL获取 注册中心Registry操作对象
+        // TODO：如果url为 service-discovery-registry 发现 ，则这个实现类型为 ServiceDiscoveryRegistry
         final Registry registry = getRegistry(registryUrl);
         // 需要向注册中心注册地址转换， 修剪多余的 url 参数
         final URL registeredProviderUrl = getUrlToRegistry(providerUrl, registryUrl);
@@ -253,7 +254,11 @@ public class RegistryProtocol implements Protocol, ScopeModelAware {
         boolean register = providerUrl.getParameter(REGISTER_KEY, true) && registryUrl.getParameter(REGISTER_KEY, true);
         // 是否向注册中心 注册
         if (register) {
-            // 注册 ！！！
+            /**
+             * 这里有两种情况：
+             * a、接口级注册会将接口级服务提供者数据直接注册到Zookeper上面，
+             * b、服务发现（应用级注册）这里仅仅会将注册数据转换为服务元数据等后面来发布元数据
+             */
             register(registry, registeredProviderUrl);
         }
 
@@ -411,7 +416,10 @@ public class RegistryProtocol implements Protocol, ScopeModelAware {
      * @return
      */
     protected Registry getRegistry(final URL registryUrl) {
+        // @see https://cn.dubbo.apache.org/zh/blog/2022/08/17/17-dubbo%E6%9C%8D%E5%8A%A1%E6%8F%90%E4%BE%9B%E8%80%85%E7%9A%84%E5%8F%8C%E6%B3%A8%E5%86%8C%E5%8E%9F%E7%90%86/
+        // 这里分为两步 先获取注册中心工厂对象
         RegistryFactory registryFactory = ScopeModelUtil.getExtensionLoader(RegistryFactory.class, registryUrl.getScopeModel()).getAdaptiveExtension();
+        // 使用注册中心工厂对象获取注册中心操作对象
         return registryFactory.getRegistry(registryUrl);
     }
 

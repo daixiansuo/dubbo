@@ -72,11 +72,16 @@ public class ZookeeperServiceDiscovery extends AbstractServiceDiscovery {
     private final Map<String, ZookeeperServiceDiscoveryChangeWatcher> watcherCaches = new ConcurrentHashMap<>();
 
     public ZookeeperServiceDiscovery(ApplicationModel applicationModel, URL registryURL) {
+        // 先调用父类AbstractServiceDiscovery 模板类构造器
         super(applicationModel, registryURL);
         try {
+            // 创建 创建CuratorFramework 类型对象用于操作Zookeeper
             this.curatorFramework = buildCuratorFramework(registryURL, this);
+            // 获取应用级服务发现的根路径 值为/services 这个可以在Zookeeper上面看到
             this.rootPath = getRootPath(registryURL);
+            // 创建服务发现对象 实现类型为ServiceDiscoveryImpl 这个实现来源于Curator框架中的discovery模块
             this.serviceDiscovery = buildServiceDiscovery(curatorFramework, rootPath);
+            // 启动服务发现
             this.serviceDiscovery.start();
         } catch (Exception e) {
             throw new IllegalStateException("Create zookeeper service discovery failed.", e);

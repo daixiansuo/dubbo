@@ -59,6 +59,7 @@ public abstract class AbstractRegistryFactory implements RegistryFactory, ScopeM
                 "Please check if `setApplicationModel` has been override.");
         }
 
+        // 销毁状态直接返回
         Registry defaultNopRegistry = registryManager.getDefaultNopRegistryIfDestroyed();
         if (null != defaultNopRegistry) {
             return defaultNopRegistry;
@@ -74,9 +75,11 @@ public abstract class AbstractRegistryFactory implements RegistryFactory, ScopeM
 
         String key = createRegistryCacheKey(url);
         Registry registry = null;
+        // check配置 是否检查注册中心连通 默认为true
         boolean check = url.getParameter(CHECK_KEY, true) && url.getPort() != 0;
 
         // Lock the registry access process to ensure a single instance of the registry
+        // 给写操作加锁方式并发写问题
         registryManager.getRegistryLock().lock();
         try {
             // double check
@@ -86,17 +89,20 @@ public abstract class AbstractRegistryFactory implements RegistryFactory, ScopeM
                 return defaultNopRegistry;
             }
 
+            // 锁内检查是否缓存中存在存在则直接返回
             registry = registryManager.getRegistry(key);
             if (registry != null) {
                 return registry;
             }
 
             // create registry by spi/ioc
+            // 使用url创建注册中心操作的逻辑
             registry = createRegistry(url);
             if (check && registry == null) {
                 throw new IllegalStateException("Can not create registry " + url);
             }
 
+            // 写入缓存
             if (registry != null) {
                 registryManager.putRegistry(key, registry);
             }

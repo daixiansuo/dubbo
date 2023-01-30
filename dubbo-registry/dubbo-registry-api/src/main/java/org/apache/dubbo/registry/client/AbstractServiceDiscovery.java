@@ -85,6 +85,8 @@ public abstract class AbstractServiceDiscovery implements ServiceDiscovery {
         this.registryURL = registryURL;
         this.metadataInfo = new MetadataInfo(serviceName);
         boolean localCacheEnabled = registryURL.getParameter(REGISTRY_LOCAL_FILE_CACHE_ENABLED, true);
+        // 这个是元数据缓存信息管理的类型 缓存文件使用LRU策略  感兴趣的可以详细看看
+        // 对应缓存路径为：/Users/song/.dubbo/.metadata.zookeeper127.0.0.1%003a2181.dubbo.cache
         this.metaCacheManager = new MetaCacheManager(localCacheEnabled, getCacheNameSuffix(),
             applicationModel.getFrameworkModel().getBeanFactory()
                 .getBean(FrameworkExecutorRepository.class).getCacheRefreshingScheduledExecutor());
@@ -224,6 +226,7 @@ public abstract class AbstractServiceDiscovery implements ServiceDiscovery {
 
     @Override
     public void register(URL url) {
+        // metadaInfo 类型为MetadataInfo类型，用来操作元数据的
         metadataInfo.addService(url);
     }
 

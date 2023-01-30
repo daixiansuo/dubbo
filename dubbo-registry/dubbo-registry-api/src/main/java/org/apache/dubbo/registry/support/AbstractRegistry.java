@@ -119,19 +119,22 @@ public abstract class AbstractRegistry implements Registry {
     protected AbstractRegistry(URL url) {
         setUrl(url);
         registryManager = url.getOrDefaultApplicationModel().getBeanFactory().getBean(RegistryManager.class);
+        // 是否本地缓存 默认为true
         localCacheEnabled = url.getParameter(REGISTRY_LOCAL_FILE_CACHE_ENABLED, true);
         registryCacheExecutor = url.getOrDefaultFrameworkModel().getBeanFactory()
             .getBean(FrameworkExecutorRepository.class).getSharedScheduledExecutor();
         if (localCacheEnabled) {
             // Start file save timer
             syncSaveFile = url.getParameter(REGISTRY_FILESAVE_SYNC_KEY, false);
-
+            //默认缓存的文件路径与文件名字为：/Users/song/.dubbo/dubbo-registry-dubbo-demo-api-provider-127.0.0.1-2181.cache
             String defaultFilename = System.getProperty(USER_HOME) + DUBBO_REGISTRY + url.getApplication() +
                 "-" + url.getAddress().replaceAll(":", "-") + CACHE;
 
+            // 未指定缓存的文件名字则用默认的文件名字
             String filename = url.getParameter(FILE_KEY, defaultFilename);
             File file = null;
 
+            //父目录创建，保证目录存在
             if (ConfigUtils.isNotEmpty(filename)) {
                 file = new File(filename);
                 if (!file.exists() && file.getParentFile() != null && !file.getParentFile().exists()) {
@@ -157,7 +160,9 @@ public abstract class AbstractRegistry implements Registry {
 
             // When starting the subscription center,
             // we need to read the local cache file for future Registry fault tolerance processing.
+            // 加载本地磁盘文件
             loadProperties();
+            // 变更推送
             notify(url.getBackupUrls());
         }
     }

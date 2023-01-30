@@ -131,11 +131,14 @@ public class MetadataInfo implements Serializable {
 
     public synchronized void addService(URL url) {
         // fixme, pass in application mode context during initialization of MetadataInfo.
+        // 元数据参数过滤器扩展获取:MetadataParamsFilter
         if (this.loader == null) {
             this.loader = url.getOrDefaultApplicationModel().getExtensionLoader(MetadataParamsFilter.class);
         }
+        // 元数据参数过滤器获取
         List<MetadataParamsFilter> filters = loader.getActivateExtension(url, "params-filter");
         // generate service level metadata
+        // 生成服务级别的元数据
         ServiceInfo serviceInfo = new ServiceInfo(url, filters);
         this.services.put(serviceInfo.getMatchKey(), serviceInfo);
         // extract common instance level params

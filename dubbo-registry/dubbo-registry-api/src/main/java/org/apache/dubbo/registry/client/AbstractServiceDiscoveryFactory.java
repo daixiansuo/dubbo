@@ -49,7 +49,9 @@ public abstract class AbstractServiceDiscoveryFactory implements ServiceDiscover
 
     @Override
     public ServiceDiscovery getServiceDiscovery(URL registryURL) {
+        //这个key是 zookeeper://127.0.0.1:2181/org.apache.dubbo.registry.client.ServiceDiscovery
         String key = registryURL.toServiceStringWithoutResolving();
+        // 一个地址需要创建一个服务发现对象
         return discoveries.computeIfAbsent(key, k -> createDiscovery(registryURL));
     }
 

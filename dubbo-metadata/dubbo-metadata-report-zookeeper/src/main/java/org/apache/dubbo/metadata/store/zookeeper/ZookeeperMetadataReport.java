@@ -130,6 +130,8 @@ public class ZookeeperMetadataReport extends AbstractMetadataReport {
     }
 
     private void storeMetadata(MetadataIdentifier metadataIdentifier, String v) {
+        // 参数false为非临时节点，这个元数据为持久节点，这个细节就暂时不看了就是将刚刚的json元数据存储到对应路径上面：
+        // 路径为：/dubbo/metadata/link.elastic.dubbo.entity.DemoService/provider/dubbo-demo-api-provider
         zkClient.createOrUpdate(getNodePath(metadataIdentifier), v, false);
     }
 

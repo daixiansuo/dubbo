@@ -84,7 +84,10 @@ public class ServiceDiscoveryRegistry extends FailbackRegistry {
 
     public ServiceDiscoveryRegistry(URL registryURL, ApplicationModel applicationModel) {
         super(registryURL);
+        // 根据url创建一个服务发现对象类型为ServiceDiscovery
         this.serviceDiscovery = createServiceDiscovery(registryURL);
+        // 这个类型为是serviceNameMapping类型是MetadataServiceNameMapping类型
+        // 服务映射主要是通过服务名字 来反查 应用信息的应用名字
         this.serviceNameMapping = (AbstractServiceNameMapping) ServiceNameMapping.getDefaultExtension(registryURL.getScopeModel());
         super.applicationModel = applicationModel;
     }
@@ -119,7 +122,9 @@ public class ServiceDiscoveryRegistry extends FailbackRegistry {
      * @return
      */
     private ServiceDiscovery getServiceDiscovery(URL registryURL) {
+        // 服务发现工厂对象的获取这里是ServiceDiscoveryFactory类型，
         ServiceDiscoveryFactory factory = getExtension(registryURL);
+        // 服务发现工厂对象获取服务发现对象 SPI
         return factory.getServiceDiscovery(registryURL);
     }
 
@@ -149,6 +154,7 @@ public class ServiceDiscoveryRegistry extends FailbackRegistry {
 
     @Override
     public final void register(URL url) {
+        // 逻辑判断比如只有side为提供者时候才能注册
         if (!shouldRegister(url)) { // Should Not Register
             return;
         }
@@ -159,6 +165,7 @@ public class ServiceDiscoveryRegistry extends FailbackRegistry {
     public void doRegister(URL url) {
         // fixme, add registry-cluster is not necessary anymore
         url = addRegistryClusterKey(url);
+        // invoke: org.apache.dubbo.registry.client.AbstractServiceDiscovery.register(org.apache.dubbo.common.URL)
         serviceDiscovery.register(url);
     }
 
