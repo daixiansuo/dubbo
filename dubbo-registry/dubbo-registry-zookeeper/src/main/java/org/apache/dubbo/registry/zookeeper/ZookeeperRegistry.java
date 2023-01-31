@@ -67,6 +67,10 @@ public class ZookeeperRegistry extends CacheableFailbackRegistry {
 
     private final Set<String> anyServices = new ConcurrentHashSet<>();
 
+    /**
+     * key： url 为 registryURL
+     * value：
+     */
     private final ConcurrentMap<URL, ConcurrentMap<NotifyListener, ChildListener>> zkListeners = new ConcurrentHashMap<>();
 
     private ZookeeperClient zkClient;
