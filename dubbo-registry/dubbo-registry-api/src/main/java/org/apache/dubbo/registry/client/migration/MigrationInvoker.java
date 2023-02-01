@@ -468,6 +468,9 @@ public class MigrationInvoker<T> implements MigrationClusterInvoker<T> {
             // 这个registryProtocol类型为InterfaceCompatibleRegistryProtocol
             invoker = registryProtocol.getInvoker(cluster, registry, type, url);
         }
+
+
+        // 由此处触发调用：org.apache.dubbo.registry.integration.DynamicDirectory.invokersChanged
         setListener(invoker, () -> {
             latch.countDown();
             if (reportService.hasReporter()) {

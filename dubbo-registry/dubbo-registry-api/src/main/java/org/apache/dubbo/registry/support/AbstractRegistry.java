@@ -522,8 +522,12 @@ public abstract class AbstractRegistry implements Registry {
         }
         // keep every provider's category.
         Map<String, List<URL>> result = new HashMap<>();
+        //这个例子中的urls会有3个可以看前面的说的
         for (URL u : urls) {
+            //这里重点关注isMatch方法
+            //这个match方法判断了消费者和提供者的分区+服务接口是否一致 或者其中一个配置为泛化配置：*
             if (UrlUtils.isMatch(url, u)) {
+                // 获取当前分类
                 String category = u.getCategory(DEFAULT_CATEGORY);
                 List<URL> categoryList = result.computeIfAbsent(category, k -> new ArrayList<>());
                 categoryList.add(u);
@@ -533,15 +537,19 @@ public abstract class AbstractRegistry implements Registry {
             return;
         }
         Map<String, List<URL>> categoryNotified = notified.computeIfAbsent(url, u -> new ConcurrentHashMap<>());
+        // 下面这个循环很重要 ！！ 会将所有的注册中心注册的数据推给notify方法包含配置，路由，服务提供者等
         for (Map.Entry<String, List<URL>> entry : result.entrySet()) {
             String category = entry.getKey();
             List<URL> categoryList = entry.getValue();
             categoryNotified.put(category, categoryList);
+            // RegistryDirectory类型的notify
+            // org.apache.dubbo.registry.integration.RegistryDirectory.notify
             listener.notify(categoryList);
 
             // We will update our cache file after each notification.
             // When our Registry has a subscribed failure due to network jitter, we can return at least the existing cache URL.
             if (localCacheEnabled) {
+                // 缓存当前服务信息：consumer://192.168.1.169/link.elastic.dubbo.entity.DemoService?application=dubbo-demo-api-consumer&background=false&category=providers,configurators,routers&dubbo=2.0.2&interface=link.elastic.dubbo.entity.DemoService&methods=sayHello,sayHelloAsync&pid=36046&qos.enable=false&qos.port=-1&release=3.0.10&side=consumer&sticky=false&timestamp=1660987214249
                 saveProperties(url);
             }
         }

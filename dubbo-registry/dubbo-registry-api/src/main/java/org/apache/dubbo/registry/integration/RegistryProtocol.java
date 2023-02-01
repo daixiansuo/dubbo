@@ -540,7 +540,7 @@ public class RegistryProtocol implements Protocol, ScopeModelAware {
         url = url.putAttribute(CONSUMER_URL_KEY, consumerUrl);
         // 重点看这一行 带迁移性质的Invoker对象
         ClusterInvoker<T> migrationInvoker = getMigrationInvoker(this, cluster, registry, type, url, consumerUrl);
-        // 这一行回来执行迁移规则创建应用级优先的服务发现Invoker对象
+        // TODO：执行迁移规则 创建应用级优先的服务发现Invoker对象 & 接口级Invoker对象
         return interceptInvoker(migrationInvoker, url, consumerUrl);
     }
 
@@ -572,6 +572,7 @@ public class RegistryProtocol implements Protocol, ScopeModelAware {
         }
 
         for (RegistryProtocolListener listener : listeners) {
+            // 前一
             listener.onRefer(this, invoker, consumerUrl, url);
         }
         return invoker;

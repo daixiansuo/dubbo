@@ -223,8 +223,15 @@ public class ZookeeperRegistry extends CacheableFailbackRegistry {
                             /dubbo/[service name]/configurators
                             /dubbo/[service name]/routers
                     */
+
+                    // 接口级默认的路径有3个我们暂时需要关注的：
+                    // 提供者：dubbo/link.elastic.dubbo.entity.DemoService/providers
+                    // 配置：dubbo/link.elastic.dubbo.entity.DemoService/configurators
+                    // 路由：/dubbo/link.elastic.dubbo.entity.DemoService/routers
                     for (String path : toCategoriesPath(url)) {
+
                         ConcurrentMap<NotifyListener, ChildListener> listeners = zkListeners.computeIfAbsent(url, k -> new ConcurrentHashMap<>());
+                        // 这里有个监听器RegistryChildListenerImpl
                         ChildListener zkListener = listeners.computeIfAbsent(listener, k -> new RegistryChildListenerImpl(url, k, latch));
 
                         if (zkListener instanceof RegistryChildListenerImpl) {
@@ -232,16 +239,22 @@ public class ZookeeperRegistry extends CacheableFailbackRegistry {
                         }
 
                         // create "directories".
+                        // 创建非临时节点，不存在时候会创建 比如/dubbo/link.elastic.dubbo.entity.DemoService/providers
                         zkClient.create(path, false, true);
 
                         // Add children (i.e. service items).
+                        // 服务目录创建完毕之后创建一个监听器用来监听子目录，同时要返回一个path目录的子子节点，比如providers下面的提供者节点列表，如果有多个可以返回多个，下面以1个的情况举例子
+                        // dubbo://192.168.1.169:20880/link.elastic.dubbo.entity.DemoService?anyhost=true&application=dubbo-demo-api-provider&background=false&deprecated=false&dubbo=2.0.2&dynamic=true&generic=false&interface=link.elastic.dubbo.entity.DemoService&methods=sayHello,sayHelloAsync&pid=51534&release=3.0.10&service-name-mapping=true&side=provider&timestamp=1659860685159
                         List<String> children = zkClient.addChildListener(path, zkListener);
                         if (children != null) {
                             // The invocation point that may cause 1-1.
+                            // urls 存储的是 当前服务 对应服务配置的路径比如提供者
                             urls.addAll(toUrlsWithEmpty(url, path, children));
                         }
                     }
 
+                    // 通知方法（服务订阅）
+                    // invoked：org.apache.dubbo.registry.support.FailbackRegistry.notify
                     notify(url, listener, urls);
                 } finally {
                     // tells the listener to run only after the sync notification of main thread finishes.

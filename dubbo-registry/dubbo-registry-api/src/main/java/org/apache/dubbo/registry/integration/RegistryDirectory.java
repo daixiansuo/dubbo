@@ -148,6 +148,12 @@ public class RegistryDirectory<T> extends DynamicDirectory<T> {
         }
     }
 
+
+    /**
+     * TODO：触发调用的地方
+     *  a、org.apache.dubbo.registry.support.AbstractRegistry#notify(org.apache.dubbo.common.URL, org.apache.dubbo.registry.NotifyListener, java.util.List)
+     *
+     */
     @Override
     public synchronized void notify(List<URL> urls) {
         if (isDestroyed()) {
@@ -177,6 +183,7 @@ public class RegistryDirectory<T> extends DynamicDirectory<T> {
                 providerURLs = addressListener.notify(providerURLs, getConsumerUrl(), this);
             }
         }
+        // 刷新
         refreshOverrideAndInvoker(providerURLs);
     }
 
@@ -229,6 +236,8 @@ public class RegistryDirectory<T> extends DynamicDirectory<T> {
             if (invokerUrls == Collections.<URL>emptyList()) {
                 invokerUrls = new ArrayList<>();
             }
+
+            // 使用本地引用以避免NPE。destroyAllInvokers（）将cachedInvokerUrls设置为空。
             // use local reference to avoid NPE as this.cachedInvokerUrls will be set null by destroyAllInvokers().
             Set<URL> localCachedInvokerUrls = this.cachedInvokerUrls;
             if (invokerUrls.isEmpty()) {
@@ -241,6 +250,7 @@ public class RegistryDirectory<T> extends DynamicDirectory<T> {
                 }
             } else {
                 localCachedInvokerUrls = new HashSet<>();
+                // 缓存的调用器URL，便于比较
                 localCachedInvokerUrls.addAll(invokerUrls);//Cached invoker urls, convenient for comparison
                 this.cachedInvokerUrls = localCachedInvokerUrls;
             }
@@ -248,15 +258,18 @@ public class RegistryDirectory<T> extends DynamicDirectory<T> {
                 return;
             }
 
+            // 使用本地引用以避免NPE。urlInvokerMap将在destroyAllInvokers（）处同时设置为null。
             // use local reference to avoid NPE as this.urlInvokerMap will be set null concurrently at destroyAllInvokers().
             Map<URL, Invoker<T>> localUrlInvokerMap = this.urlInvokerMap;
             // can't use local reference as oldUrlInvokerMap's mappings might be removed directly at toInvokers().
+            // 无法使用本地引用，因为oldUrlInvokerMap的映射可能会在toInvokers（）处直接删除。
             Map<URL, Invoker<T>> oldUrlInvokerMap = null;
             if (localUrlInvokerMap != null) {
                 // the initial capacity should be set greater than the maximum number of entries divided by the load factor to avoid resizing.
                 oldUrlInvokerMap = new LinkedHashMap<>(Math.round(1 + localUrlInvokerMap.size() / DEFAULT_HASHMAP_LOAD_FACTOR));
                 localUrlInvokerMap.forEach(oldUrlInvokerMap::put);
             }
+            // 将URL转换为Invoker  这里会做一些协议的指定过滤操作
             Map<URL, Invoker<T>> newUrlInvokerMap = toInvokers(oldUrlInvokerMap, invokerUrls);// Translate url list to Invoker map
 
             /*
@@ -357,6 +370,10 @@ public class RegistryDirectory<T> extends DynamicDirectory<T> {
      * Turn urls into invokers, and if url has been referred, will not re-reference.
      * the items that will be put into newUrlInvokeMap will be removed from oldUrlInvokerMap.
      *
+     * 如果URL已转换为invoker，它将不再被重新引用并直接从缓存中获取，请注意，URL中的任何参数更改都将被重新引用。
+     * 如果传入调用器列表不为空，则表示它是最新的调用器列表。
+     * 如果传入invokerUrl的列表为空，则意味着该规则只是一个覆盖规则或路由规则，需要重新对比以决定是否重新引用。
+     *
      * @param oldUrlInvokerMap it might be modified during the process.
      * @param urls
      * @return invokers
@@ -366,8 +383,12 @@ public class RegistryDirectory<T> extends DynamicDirectory<T> {
         if (urls == null || urls.isEmpty()) {
             return newUrlInvokerMap;
         }
+
+        // 这个配置怎么来呢，这个配置是就是要过滤的协议，如果我们指定了当前接口的协议比如dubbo.reference.<interface>.protocol这样的指定协议配置就可以在这里过滤出合法的协议
         String queryProtocols = this.queryMap.get(PROTOCOL_KEY);
+        // 遍历所有提供者列表进行转换
         for (URL providerUrl : urls) {
+            // 空协议 直接跳过
             if (!checkProtocolValid(queryProtocols, providerUrl)) {
                 continue;
             }
@@ -387,6 +408,7 @@ public class RegistryDirectory<T> extends DynamicDirectory<T> {
                         enabled = url.getParameter(ENABLED_KEY, true);
                     }
                     if (enabled) {
+                        // 消费者引用服务提供者
                         invoker = protocol.refer(serviceType, url);
                     }
                 } catch (Throwable t) {

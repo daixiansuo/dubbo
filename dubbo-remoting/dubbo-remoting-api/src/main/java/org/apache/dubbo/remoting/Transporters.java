@@ -71,6 +71,7 @@ public class Transporters {
         } else {
             handler = new ChannelHandlerDispatcher(handlers);
         }
+        // 默认的传输器是netty4
         return getTransporter(url).connect(url, handler);
     }
 

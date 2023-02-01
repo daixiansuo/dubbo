@@ -59,6 +59,7 @@ final class LazyConnectExchangeClient implements ExchangeClient {
 
     public LazyConnectExchangeClient(URL url, ExchangeHandler requestHandler) {
         // lazy connect, need set send.reconnect = true, to avoid channel bad status.
+        // 延迟连接，需要设置send.reconnect=true，以避免通道不良状态。
         this.url = url.addParameter(LAZY_CONNECT_KEY, true);
         this.needReconnect = url.getParameter(SEND_RECONNECT_KEY, false);
         this.requestHandler = requestHandler;

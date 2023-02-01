@@ -59,11 +59,16 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
     public AbstractClient(URL url, ChannelHandler handler) throws RemotingException {
         super(url, handler);
         // set default needReconnect true when channel is not connected
+        // 设置默认 需要通道未连接时 重新连接 true
         needReconnect = url.getParameter(Constants.SEND_RECONNECT_KEY, true);
 
+        // 初始化线程池 默认为FixedThreadPool
         initExecutor(url);
 
         try {
+            // 启动netty的核心代码初始化Bootstrap
+            // 默认走的是NioSocketChannel
+            // 初始化默认连接超时时间为3秒
             doOpen();
         } catch (Throwable t) {
             close();
@@ -74,6 +79,8 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
 
         try {
             // connect.
+            // 前面是初始化netty的客户端启动类Bootstrap 这里是执行连接的代码：bootstrap.connect(getConnectAddress());
+            // 等待3秒连接失败则抛出异常
             connect();
             if (logger.isInfoEnabled()) {
                 logger.info("Start " + getClass().getSimpleName() + " " + NetUtils.getLocalAddress() + " connect to the server " + getRemoteAddress());

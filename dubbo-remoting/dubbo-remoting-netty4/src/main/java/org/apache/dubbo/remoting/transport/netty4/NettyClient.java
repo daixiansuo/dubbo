@@ -90,7 +90,8 @@ public class NettyClient extends AbstractClient {
      */
     public NettyClient(final URL url, final ChannelHandler handler) throws RemotingException {
         // you can customize name and type of client thread pool by THREAD_NAME_KEY and THREADPOOL_KEY in CommonConstants.
-        // the handler will be wrapped: MultiMessageHandler->HeartbeatHandler->handler
+        // TODO：the handler will be wrapped: MultiMessageHandler -> HeartbeatHandler -> handler
+        // wrapped: org.apache.dubbo.remoting.transport.dispatcher.ChannelHandlers.wrapInternal
         super(url, wrapChannelHandler(url, handler));
     }
 

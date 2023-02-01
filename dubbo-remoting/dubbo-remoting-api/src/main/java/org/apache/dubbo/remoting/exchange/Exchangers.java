@@ -104,6 +104,8 @@ public class Exchangers {
         if (handler == null) {
             throw new IllegalArgumentException("handler == null");
         }
+
+        // 交换器扩展对象获取默认为 HeaderExchanger类型
         return getExchanger(url).connect(url, handler);
     }
 
