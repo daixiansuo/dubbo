@@ -62,8 +62,12 @@ public class InterfaceCompatibleRegistryProtocol extends RegistryProtocol {
 
     @Override
     public <T> ClusterInvoker<T> getServiceDiscoveryInvoker(Cluster cluster, Registry registry, Class<T> type, URL url) {
+        // 注册中心Registry类型对象获取 ，
+        // 因为 url 中协议为 应用级服务发现，所以这里获取到的是ListenerRegistryWrapper 类型，其中包装了ServiceDiscoveryRegistry类型
         registry = getRegistry(super.getRegistryUrl(url));
+        // 服务发现注册目录对象创建
         DynamicDirectory<T> directory = new ServiceDiscoveryRegistryDirectory<>(type, url);
+        // 创建Invoker
         return doCreateInvoker(directory, cluster, registry, type);
     }
 

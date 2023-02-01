@@ -613,7 +613,9 @@ public class RegistryProtocol implements Protocol, ScopeModelAware {
         urlToRegistry = urlToRegistry.setServiceModel(directory.getConsumerUrl().getServiceModel());
         if (directory.isShouldRegister()) {
             directory.setRegisteredConsumerUrl(urlToRegistry);
-            //TODO: 这一行代码是将 服务消费者 的配置信息注册到注册中心的逻辑 ListenerRegistryWrapper.register
+            // TODO: 这一行代码是将 服务消费者 的配置信息注册到注册中心的逻辑 ListenerRegistryWrapper.register
+            // TODO：registry 根据 接口级、应用级，分别对应不同的 "Registry"
+            // TODO：应用级：registry 类型服务发现的类型ServiceDiscoveryRegistry 接口级为：ZookeeperRegistry类型
             registry.register(directory.getRegisteredConsumerUrl());
         }
 
@@ -621,6 +623,7 @@ public class RegistryProtocol implements Protocol, ScopeModelAware {
         directory.buildRouterChain(urlToRegistry);
         // TODO： 服务发现并订阅的逻辑 （org.apache.dubbo.registry.integration.RegistryDirectory.subscribe）
         // toSubscribeUrl(urlToRegistry) 方法 添加 providers,configurators,routers
+        // TODO：应用级：ServiceDiscoveryRegistryDirectory 接口级为：RegistryDirectory 类型
         directory.subscribe(toSubscribeUrl(urlToRegistry));
 
         // cluster类型为 MockClusterWrapper 包装了 FailoverCluster

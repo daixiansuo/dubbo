@@ -119,11 +119,13 @@ public class ServiceDiscoveryRegistryDirectory<T> extends DynamicDirectory<T> {
     public void subscribe(URL url) {
         if (moduleModel.getModelEnvironment().getConfiguration().convert(Boolean.class, Constants.ENABLE_CONFIGURATION_LISTEN, true)) {
             enableConfigurationListen = true;
+            // 为ConsumerConfigurationListener类型中的listeners列表添加监听器： 监听器类型为ServiceDiscoveryRegistryDirectory
             getConsumerConfigurationListener(moduleModel).addNotifyListener(this);
             referenceConfigurationListener = new ReferenceConfigurationListener(this.moduleModel, this, url);
         } else {
             enableConfigurationListen = false;
         }
+        // 调用父类类型DynamicDirectory的订阅方法subscribe 开始开启订阅逻辑 这个逻辑与接口级的逻辑是一样的
         super.subscribe(url);
     }
 

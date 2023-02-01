@@ -439,6 +439,7 @@ public class MigrationInvoker<T> implements MigrationClusterInvoker<T> {
             }
 
             // 创建 应用级别 Invoker，并注册到 注册中心
+            // org.apache.dubbo.registry.integration.InterfaceCompatibleRegistryProtocol.getServiceDiscoveryInvoker
             serviceDiscoveryInvoker = registryProtocol.getServiceDiscoveryInvoker(cluster, registry, type, url);
         }
         setListener(serviceDiscoveryInvoker, () -> {

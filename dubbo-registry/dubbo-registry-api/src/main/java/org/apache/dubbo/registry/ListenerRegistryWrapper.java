@@ -90,6 +90,7 @@ public class ListenerRegistryWrapper implements Registry {
 
             // 这个registry类型为ZookeeperRegistry
             // ZookeeperRegistry 类没有 subscribe 方法，调用的是其 父类型 FailbackRegistry 的 subscribe 方法
+            // TODO：应用级：registry类型服务发现的类型 ServiceDiscoveryRegistry 接口级为：ZookeeperRegistry类型
             if (registry != null) {
                 registry.subscribe(url, listener);
             }

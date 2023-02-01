@@ -121,6 +121,7 @@ public class ServiceInstancesChangedListener {
             return;
         }
 
+        // 刷新内存数据
         refreshInstance(event);
 
         if (logger.isDebugEnabled()) {
@@ -131,6 +132,7 @@ public class ServiceInstancesChangedListener {
         Map<ServiceInfo, Set<String>> localServiceToRevisions = new HashMap<>();
 
         // grouping all instances of this app(service name) by revision
+        // 刷新内存数据
         for (Map.Entry<String, List<ServiceInstance>> entry : allInstances.entrySet()) {
             List<ServiceInstance> instances = entry.getValue();
             for (ServiceInstance instance : instances) {
@@ -147,10 +149,12 @@ public class ServiceInstancesChangedListener {
         }
 
         // get MetadataInfo with revision
+        // 重点看这里
         for (Map.Entry<String, List<ServiceInstance>> entry : revisionToInstances.entrySet()) {
             String revision = entry.getKey();
             List<ServiceInstance> subInstances = entry.getValue();
 
+            // 这里对应ZookeeperServiceDiscovery类型
             MetadataInfo metadata = subInstances.stream()
                 .map(ServiceInstance::getServiceMetadata)
                 .filter(Objects::nonNull)
@@ -158,8 +162,10 @@ public class ServiceInstancesChangedListener {
                 .findFirst()
                 .orElseGet(() -> serviceDiscovery.getRemoteMetadata(revision, subInstances));
 
+            // 解析元数据 最终结果存在localServiceToRevisions变量中 key为协议 值为服务接口与服务元数据信息
             parseMetadata(revision, metadata, localServiceToRevisions);
             // update metadata into each instance, in case new instance created.
+            // 为每个实例更新其元数据信息
             for (ServiceInstance tmpInstance : subInstances) {
                 MetadataInfo originMetadata = tmpInstance.getServiceMetadata();
                 if (originMetadata == null || !Objects.equals(originMetadata.getRevision(), metadata.getRevision())) {

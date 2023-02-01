@@ -170,6 +170,8 @@ public class ZookeeperMetadataReport extends AbstractMetadataReport {
             return newMappingListener;
         });
         mappingDataListener.addListener(listener);
+        // 这个拼装后的路径为：/dubbo/mapping/link.elastic.dubbo.entity.DemoService
+        // 这里获取到的应用名字为：dubbo-demo-api-provider
         return getAppNames(zkClient.getContent(path));
     }
 

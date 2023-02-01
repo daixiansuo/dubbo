@@ -166,6 +166,7 @@ public class ServiceDiscoveryRegistry extends FailbackRegistry {
         // fixme, add registry-cluster is not necessary anymore
         url = addRegistryClusterKey(url);
         // invoke: org.apache.dubbo.registry.client.AbstractServiceDiscovery.register(org.apache.dubbo.common.URL)
+        // 不向注册中心注册，只会 上报数据到元数据中心（此时应该是在内存之中，后续会同一上报）
         serviceDiscovery.register(url);
     }
 
@@ -186,27 +187,35 @@ public class ServiceDiscoveryRegistry extends FailbackRegistry {
 
     @Override
     public final void subscribe(URL url, NotifyListener listener) {
+
+        // 前面是否注册shouldRegister为false 这里是是否订阅shouldSubscribe方法结果为true
         if (!shouldSubscribe(url)) { // Should Not Subscribe
             return;
         }
+
+        // 执行订阅逻辑
         doSubscribe(url, listener);
     }
 
     @Override
     public void doSubscribe(URL url, NotifyListener listener) {
         url = addRegistryClusterKey(url);
-
+        // 服务发现类型为 ZookeeperServiceDiscovery，不过 ZookeeperServiceDiscovery 没重写 subscribe方法，调用其父类 AbstractServiceDiscovery 的 subscribe 方法
         serviceDiscovery.subscribe(url, listener);
 
         boolean check = url.getParameter(CHECK_KEY, false);
 
         String key = ServiceNameMapping.buildMappingKey(url);
+        // 应用级服务发现悲观锁先加上一把
         Lock mappingLock = serviceNameMapping.getMappingLock(key);
         try {
             mappingLock.lock();
             Set<String> subscribedServices = serviceNameMapping.getCachedMapping(url);
             try {
                 MappingListener mappingListener = new DefaultMappingListener(url, subscribedServices, listener);
+                // TODO：注意注意这行代码超级重要 当前是服务接口要找到服务的应用名字 将会查询映射信息对应节点：
+                // /dubbo/mapping/link.elastic.dubbo.entity.DemoService
+                // 这里最终获取到的应用服务提供者名字集合为 dubbo-demo-api-provider
                 subscribedServices = serviceNameMapping.getAndListen(this.getUrl(), url, mappingListener);
                 mappingListeners.put(url.getProtocolServiceKey(), mappingListener);
             } catch (Exception e) {
@@ -221,6 +230,7 @@ public class ServiceDiscoveryRegistry extends FailbackRegistry {
                 return;
             }
 
+            // 执行订阅url的逻辑
             subscribeURLs(url, listener, subscribedServices);
         } finally {
             mappingLock.unlock();
@@ -318,9 +328,12 @@ public class ServiceDiscoveryRegistry extends FailbackRegistry {
             if (serviceInstancesChangedListener == null) {
                 serviceInstancesChangedListener = serviceDiscovery.createListener(serviceNames);
                 serviceInstancesChangedListener.setUrl(url);
+                // 这个应用名字为：dubbo-demo-api-provider
                 for (String serviceName : serviceNames) {
+                    // 这个代码调用的是curator 框架的方法 通过应用名字节点查询节点下面的所有服务提供者的应用信息待会截图看
                     List<ServiceInstance> serviceInstances = serviceDiscovery.getInstances(serviceName);
                     if (CollectionUtils.isNotEmpty(serviceInstances)) {
+                        // 发现了存在服务提供者则触发监听器开始进行应用发现通知
                         serviceInstancesChangedListener.onEvent(new ServiceInstancesChangedEvent(serviceName, serviceInstances));
                     }
                 }
