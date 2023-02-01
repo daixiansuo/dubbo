@@ -97,9 +97,11 @@ public class MockClusterInvoker<T> implements ClusterInvoker<T> {
     public Result invoke(Invocation invocation) throws RpcException {
         Result result;
 
+        // 判断是否开启服务容错逻辑mock 默认是没有开启的
         String value = getUrl().getMethodParameter(invocation.getMethodName(), MOCK_KEY, Boolean.FALSE.toString()).trim();
         if (ConfigUtils.isEmpty(value)) {
             //no mock
+            // TODO：接下来要走的逻辑 是默认类 AbstractCluster 的invoke方法 ！！！！
             result = this.invoker.invoke(invocation);
         } else if (value.startsWith(FORCE_KEY)) {
             if (logger.isWarnEnabled()) {

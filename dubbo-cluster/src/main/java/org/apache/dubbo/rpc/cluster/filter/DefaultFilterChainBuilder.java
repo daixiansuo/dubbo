@@ -79,7 +79,7 @@ public class DefaultFilterChainBuilder implements FilterChainBuilder {
     }
 
     /**
-     * build consumer cluster filter chain
+     * TODO: build consumer cluster filter chain
      */
     @Override
     public <T> ClusterInvoker<T> buildClusterInvokerChain(final ClusterInvoker<T> originalInvoker, String key, String group) {
@@ -88,6 +88,8 @@ public class DefaultFilterChainBuilder implements FilterChainBuilder {
         List<ModuleModel> moduleModels = getModuleModelsFromUrl(url);
         List<ClusterFilter> filters;
         if (moduleModels != null && moduleModels.size() == 1) {
+            // ClusterFilter 类型过滤器
+            // 通过扩展查询匹配的 消费者过滤器列表这里可以查询4个
             filters = ScopeModelUtil.getExtensionLoader(ClusterFilter.class, moduleModels.get(0)).getActivateExtension(url, key, group);
         } else if (moduleModels != null && moduleModels.size() > 1) {
             filters = new ArrayList<>();
@@ -103,6 +105,7 @@ public class DefaultFilterChainBuilder implements FilterChainBuilder {
             filters = ScopeModelUtil.getExtensionLoader(ClusterFilter.class, null).getActivateExtension(url, key, group);
         }
 
+        // TODO: 过滤器不为空 则拼接到调用链表之中
         if (!CollectionUtils.isEmpty(filters)) {
             for (int i = filters.size() - 1; i >= 0; i--) {
                 final ClusterFilter filter = filters.get(i);

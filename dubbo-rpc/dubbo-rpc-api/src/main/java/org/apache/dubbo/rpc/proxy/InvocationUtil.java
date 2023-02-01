@@ -35,6 +35,8 @@ public class InvocationUtil {
     private static final ErrorTypeAwareLogger logger = LoggerFactory.getErrorTypeAwareLogger(InvokerInvocationHandler.class);
 
     public static Object invoke(Invoker<?> invoker, RpcInvocation rpcInvocation) throws Throwable {
+
+        // targetServiceUniqueName
         URL url = invoker.getUrl();
         String serviceKey = url.getServiceKey();
         rpcInvocation.setTargetServiceUniqueName(serviceKey);
@@ -42,9 +44,16 @@ public class InvocationUtil {
         // invoker.getUrl() returns consumer url.
         RpcServiceContext.getServiceContext().setConsumerUrl(url);
 
+        // 默认前后开启性能分析
         if (ProfilerSwitch.isEnableSimpleProfiler()) {
+
+            // 创建一个InternalThreadLocal<ProfilerEntry> bizProfiler线程本地对象来存储性能信息
+            // 首次进入这个性能实体为空
             ProfilerEntry parentProfiler = Profiler.getBizProfiler();
             ProfilerEntry bizProfiler;
+
+            // 首次为空走下面逻辑创建个性能分析实体
+            // 这里如果是第二个调用invoker方法则将性能数据串起来前面的放到parent ProfilerEntry 内部用链表结构实现一个性能链路
             if (parentProfiler != null) {
                 bizProfiler = Profiler.enter(parentProfiler,
                     "Receive request. Client invoke begin. ServiceKey: " + serviceKey + " MethodName:" + rpcInvocation.getMethodName());
@@ -53,6 +62,9 @@ public class InvocationUtil {
             }
             rpcInvocation.put(Profiler.PROFILER_KEY, bizProfiler);
             try {
+
+                // 第一个invoker类型为 MigrationInvoker
+                // a、invoke  b、recreate
                 return invoker.invoke(rpcInvocation).recreate();
             } finally {
                 Profiler.release(bizProfiler);

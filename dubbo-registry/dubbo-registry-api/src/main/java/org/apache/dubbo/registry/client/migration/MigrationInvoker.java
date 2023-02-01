@@ -299,6 +299,7 @@ public class MigrationInvoker<T> implements MigrationClusterInvoker<T> {
                 currentAvailableInvoker = invoker;
         }
 
+        // 接下来要走的Invoker逻辑是带有容错逻辑的 MockClusterInvoker 的invoker
         return currentAvailableInvoker.invoke(invocation);
     }
 

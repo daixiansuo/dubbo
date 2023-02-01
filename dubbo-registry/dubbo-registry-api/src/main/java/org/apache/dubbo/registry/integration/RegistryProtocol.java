@@ -627,6 +627,7 @@ public class RegistryProtocol implements Protocol, ScopeModelAware {
         directory.subscribe(toSubscribeUrl(urlToRegistry));
 
         // cluster类型为 MockClusterWrapper 包装了 FailoverCluster
+        // TODO: FailoverCluster 没有实现join方法需要先调用它的父类型AbstractCluster的join方法, 就是在此时构建的 过滤器
         // 这个是处理调用链路的 最前面的调用是容错然后回加上失效转移，过滤器负载均衡等等invoker执行的时候按顺序执行
         return (ClusterInvoker<T>) cluster.join(directory, true);
     }

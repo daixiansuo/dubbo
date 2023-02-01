@@ -42,6 +42,13 @@ import static org.apache.dubbo.common.constants.CommonConstants.REFERENCE_FILTER
 
 public abstract class AbstractCluster implements Cluster {
 
+
+    /**
+     * TODO: 创建过滤器  ！！！
+     * @param clusterInvoker FailoverClusterInvoker
+     * @return
+     * @param <T>
+     */
     private <T> Invoker<T> buildClusterInterceptors(AbstractClusterInvoker<T> clusterInvoker) {
 //        AbstractClusterInvoker<T> last = clusterInvoker;
         AbstractClusterInvoker<T> last = buildInterceptorInvoker(new ClusterFilterInvoker<>(clusterInvoker));
@@ -54,7 +61,9 @@ public abstract class AbstractCluster implements Cluster {
 
     @Override
     public <T> Invoker<T> join(Directory<T> directory, boolean buildFilterChain) throws RpcException {
+        // 带有过滤器将走上面这个逻辑
         if (buildFilterChain) {
+            // 先创建Invoker对象再创建过滤器
             return buildClusterInterceptors(doJoin(directory));
         } else {
             return doJoin(directory);
@@ -75,11 +84,13 @@ public abstract class AbstractCluster implements Cluster {
         private ClusterInvoker<T> filterInvoker;
 
         public ClusterFilterInvoker(AbstractClusterInvoker<T> invoker) {
+            // 过滤器构造链DefaultFilterChainBuilder
             List<FilterChainBuilder> builders = ScopeModelUtil.getApplicationModel(invoker.getUrl().getScopeModel()).getExtensionLoader(FilterChainBuilder.class).getActivateExtensions();
             if (CollectionUtils.isEmpty(builders)) {
                 filterInvoker = invoker;
             } else {
                 ClusterInvoker<T> tmpInvoker = invoker;
+                // DefaultFilterChainBuilder类型的 buildClusterInvokerChain 构造过滤器链路
                 for (FilterChainBuilder builder : builders) {
                     tmpInvoker = builder.buildClusterInvokerChain(tmpInvoker, REFERENCE_FILTER_KEY, CommonConstants.CONSUMER);
                 }
