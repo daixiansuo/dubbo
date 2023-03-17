@@ -17,6 +17,7 @@
 package org.apache.dubbo.registry.client.metadata;
 
 import org.apache.dubbo.common.URL;
+import org.apache.dubbo.common.config.ConfigurationUtils;
 import org.apache.dubbo.common.config.configcenter.ConfigItem;
 import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
@@ -34,11 +35,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.apache.dubbo.common.constants.CommonConstants.COMMA_SEPARATOR;
 import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_KEY;
-import static org.apache.dubbo.common.constants.LoggerCodeConstants.REGISTRY_ADDRESS_INVALID;
-import static org.apache.dubbo.common.constants.LoggerCodeConstants.REGISTRY_UNEXPECTED_EXCEPTION;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.COMMON_PROPERTY_TYPE_MISMATCH;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.INTERNAL_ERROR;
+import static org.apache.dubbo.registry.Constants.CAS_RETRY_TIMES_KEY;
+import static org.apache.dubbo.registry.Constants.CAS_RETRY_WAIT_TIME_KEY;
+import static org.apache.dubbo.registry.Constants.DEFAULT_CAS_RETRY_TIMES;
+import static org.apache.dubbo.registry.Constants.DEFAULT_CAS_RETRY_WAIT_TIME;
 
 public class MetadataServiceNameMapping extends AbstractServiceNameMapping {
 
@@ -46,12 +52,20 @@ public class MetadataServiceNameMapping extends AbstractServiceNameMapping {
 
     private static final List<String> IGNORED_SERVICE_INTERFACES = Collections.singletonList(MetadataService.class.getName());
 
-    private static final int CAS_RETRY_TIMES = 6;
+    private final int casRetryTimes;
+    private final int casRetryWaitTime;
     protected MetadataReportInstance metadataReportInstance;
 
     public MetadataServiceNameMapping(ApplicationModel applicationModel) {
         super(applicationModel);
         metadataReportInstance = applicationModel.getBeanFactory().getBean(MetadataReportInstance.class);
+        casRetryTimes = ConfigurationUtils.getGlobalConfiguration(applicationModel).getInt(CAS_RETRY_TIMES_KEY, DEFAULT_CAS_RETRY_TIMES);
+        casRetryWaitTime = ConfigurationUtils.getGlobalConfiguration(applicationModel).getInt(CAS_RETRY_WAIT_TIME_KEY, DEFAULT_CAS_RETRY_WAIT_TIME);
+    }
+
+    @Override
+    public boolean hasValidMetadataCenter() {
+        return !CollectionUtils.isEmpty(applicationModel.getApplicationConfigManager().getMetadataConfigs());
     }
 
     /**
@@ -60,7 +74,7 @@ public class MetadataServiceNameMapping extends AbstractServiceNameMapping {
     @Override
     public boolean map(URL url) {
         if (CollectionUtils.isEmpty(applicationModel.getApplicationConfigManager().getMetadataConfigs())) {
-            logger.warn(REGISTRY_ADDRESS_INVALID, "", "", "No valid metadata config center found for mapping report.");
+            logger.warn(COMMON_PROPERTY_TYPE_MISMATCH, "", "", "No valid metadata config center found for mapping report.");
             return false;
         }
         String serviceInterface = url.getServiceInterface();
@@ -78,30 +92,47 @@ public class MetadataServiceNameMapping extends AbstractServiceNameMapping {
                     continue;
                 }
 
-                boolean succeeded;
+                boolean succeeded = false;
                 int currentRetryTimes = 1;
                 String newConfigContent = appName;
                 do {
                     ConfigItem configItem = metadataReport.getConfigItem(serviceInterface, DEFAULT_MAPPING_GROUP);
                     String oldConfigContent = configItem.getContent();
                     if (StringUtils.isNotEmpty(oldConfigContent)) {
-                        boolean contains = StringUtils.isContains(oldConfigContent, appName);
-                        if (contains) {
-                            // From the user's perspective, it means successful when the oldConfigContent has contained the current appName. So we should not throw an Exception to user, it will confuse the user.
-                            succeeded = true;
+                        String[] oldAppNames = oldConfigContent.split(",");
+                        if (oldAppNames.length > 0) {
+                            for (String oldAppName : oldAppNames) {
+                                if (oldAppName.equals(appName)) {
+                                    succeeded = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (succeeded) {
                             break;
                         }
                         newConfigContent = oldConfigContent + COMMA_SEPARATOR + appName;
                     }
                     succeeded = metadataReport.registerServiceAppMapping(serviceInterface, DEFAULT_MAPPING_GROUP, newConfigContent, configItem.getTicket());
-                } while (!succeeded && currentRetryTimes++ <= CAS_RETRY_TIMES);
+                    if (!succeeded) {
+                        int waitTime = ThreadLocalRandom.current().nextInt(casRetryWaitTime);
+                        logger.info("Failed to publish service name mapping to metadata center by cas operation. " +
+                            "Times: " + currentRetryTimes + ". " +
+                            "Next retry delay: " + waitTime + ". " +
+                            "Service Interface: " + serviceInterface + ". " +
+                            "Origin Content: " + oldConfigContent + ". " +
+                            "Ticket: " + configItem.getTicket() + ". " +
+                            "Excepted context: " + newConfigContent);
+                        Thread.sleep(waitTime);
+                    }
+                } while (!succeeded && currentRetryTimes++ <= casRetryTimes);
 
                 if (!succeeded) {
                     result = false;
                 }
             } catch (Exception e) {
                 result = false;
-                logger.warn(REGISTRY_UNEXPECTED_EXCEPTION, "", "", "Failed registering mapping to remote." + metadataReport, e);
+                logger.warn(INTERNAL_ERROR, "unknown error in registry module", "", "Failed registering mapping to remote." + metadataReport, e);
             }
         }
 

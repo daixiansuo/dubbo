@@ -25,6 +25,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.locks.Lock;
+
 /**
  * {@link ScopeModelUtil}
  */
@@ -36,8 +38,8 @@ class ScopeModelUtilTest {
     @BeforeEach
     public void setUp() {
         frameworkModel = new FrameworkModel();
-        applicationModel = new ApplicationModel(frameworkModel);
-        moduleModel = new ModuleModel(applicationModel);
+        applicationModel = frameworkModel.newApplication();
+        moduleModel = applicationModel.newModule();
     }
 
     @AfterEach
@@ -107,6 +109,11 @@ class ScopeModelUtilTest {
 
         @Override
         public Environment getModelEnvironment() {
+            return null;
+        }
+
+        @Override
+        protected Lock acquireDestroyLock() {
             return null;
         }
     }
